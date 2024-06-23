@@ -1,5 +1,5 @@
 from exp_uqsd_med import *
-import qiskit.primitives
+# import qiskit.primitives
 from qiskit_aer import AerSimulator
 from qiskit_braket_provider import *
 
@@ -48,23 +48,19 @@ def exp0(
     import sys, os
 
     func_name = sys._getframe().f_code.co_name
+    exp_folder = func_name + "_" + str(datetime.now().date())
+    if not os.path.exists(exp_folder):
+        os.mkdir(exp_folder)
+    
     if print_circ:
-        if not os.path.exists(f".//{func_name}"):
-            os.mkdir(f".//{func_name}")
-        if not os.path.exists(f".//{func_name}//figures"):
-            os.mkdir(f".//{func_name}//figures")
+        if not os.path.exists(f"{exp_folder}/figures"):
+            os.mkdir(f"{exp_folder}/figures")
 
-    if sim:
-        if not os.path.exists(f".//{func_name}"):
-            os.mkdir(f".//{func_name}")
-        if not os.path.exists(f".//{func_name}//results"):
-            os.mkdir(f".//{func_name}//results")
-
-    if ibmq or ionq:
-        if not os.path.exists(f".//{func_name}"):
-            os.mkdir(f".//{func_name}")
-        if not os.path.exists(f".//{func_name}//results"):
-            os.mkdir(f".//{func_name}//results")
+    if sim or ibmq or ionq:
+        if not os.path.exists(f"{exp_folder}/results"):
+            os.mkdir(f"{exp_folder}/results")
+        if not os.path.exists(f"{exp_folder}/raw"):
+            os.mkdir(f"{exp_folder}/raw")
 
     if sim:
         colors = list(mcolors.TABLEAU_COLORS)
@@ -84,7 +80,8 @@ def exp0(
         elif qsd_method == "MED":
             theo = [0.5 * (1 + np.sqrt(1 - 4 * p1 * (1 - p1) * i)) for i in x_axis]
         sqrt_x = [np.sqrt(i) for i in x_axis]
-
+        np.savetxt(f'{exp_folder}/raw/sqrt_x_{p1}.csv', sqrt_x, fmt="%.16f", delimiter=",")
+        quit()
         # # theoretical result
         # if qsd_method in ["MED", "med"]:
         #     success_rate = (
