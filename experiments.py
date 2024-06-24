@@ -50,12 +50,13 @@ def theo_succ_rates(qsd_method="UQSD", num_points=20):
             fname = f"{exp_folder}/raw/{qsd_method}_theo_succ_{num_points}_{p1:.1f}.csv"
             np.savetxt(fname, theo_succ_rate, fmt="%.16f", delimiter=",")
             plt.plot(
-                sqrt_x, theo_succ_rate, ".-", label=f"p1 = {p1:.1f}", color=colors[i]
+                sqrt_x, theo_succ_rate, ".-", label=r"$p_1$" f" = {p1:.1f}", color=colors[i]
             )
         plt.legend(loc="lower left")
 
-    plt.xlabel("c0 of Bob" + f" ({num_points} points)")
-    plt.ylabel("Average hit rate")
+    # plt.xlabel("c0 of Bob" + f" ({num_points} points)")
+    plt.xlabel(r"$|\langle \phi_1 | \phi_2 \rangle|$")
+    plt.ylabel("Success rate")
     plt.title(f"{qsd_method} Theoretical success rates")
     plt.grid(True)
     plt.savefig(
