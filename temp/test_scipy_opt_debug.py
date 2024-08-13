@@ -1,16 +1,10 @@
 import numpy as np
-import pprint
-
-# from scipy.optimize import minimize, NonlinearConstraint
-from scipy.optimize import NonlinearConstraint
-from scipy.linalg import null_space
-import scipy
 from itertools import combinations
 from functools import partial
-from qiskit.quantum_info import Statevector, random_statevector
+from scipy.optimize import NonlinearConstraint
+from scipy.linalg import null_space
 from cobyqa import minimize
-
-# import scipy.optimize
+from qiskit.quantum_info import random_statevector
 
 
 def gen_states(
