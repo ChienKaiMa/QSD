@@ -31,12 +31,6 @@ def test_idea():
         prods.append(abs(s1.inner(s2)))
     # print(prods)
 
-    # TODO
-    state_coeffs = []
-    for i in range(num_states):
-        # states[i].data
-        print()
-
     # Obtain every null space for each set of orthonormal basis
     null_spaces = []
 
