@@ -129,8 +129,8 @@ def test_idea():
         # TODO Check the signs
         s_real = np.array([i.real for i in states[op_idx].data])
         s_imag = np.array([i.imag for i in states[op_idx].data])
-        vec_real = np.array(whole_vec_imag(num_basis, op_idx, x))
-        vec_imag = np.array(whole_vec_imag(num_basis, op_idx, x))
+        vec_real = np.array(whole_vec_real(num_basis, num_ops - 1 - op_idx, x))
+        vec_imag = np.array(whole_vec_imag(num_basis, num_ops - 1 - op_idx, x))
         final_real = np.inner(s_real, vec_real) - np.inner(s_imag, vec_imag)
         final_imag = np.inner(s_real, vec_imag) + np.inner(s_imag, vec_real)
         return final_real**2 + final_imag**2
