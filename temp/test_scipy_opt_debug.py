@@ -143,18 +143,18 @@ def test_idea():
         return s
 
     def mult_vec_and_vec_real(num_basis, op_idx0, op_idx1, x):
-        vec0_real = np.array(whole_vec_imag(num_basis, op_idx0, x))
+        vec0_real = np.array(whole_vec_real(num_basis, op_idx0, x))
         vec0_imag = np.array(whole_vec_imag(num_basis, op_idx0, x))
-        vec1_real = np.array(whole_vec_imag(num_basis, op_idx1, x))
+        vec1_real = np.array(whole_vec_real(num_basis, op_idx1, x))
         vec1_imag = np.array(whole_vec_imag(num_basis, op_idx1, x))
-        return np.inner(vec0_real, vec1_real) - np.inner(vec0_imag, vec1_imag)
+        return np.inner(vec0_real, vec1_real) + np.inner(vec0_imag, vec1_imag)
 
     def mult_vec_and_vec_imag(num_basis, op_idx0, op_idx1, x):
-        vec0_real = np.array(whole_vec_imag(num_basis, op_idx0, x))
+        vec0_real = np.array(whole_vec_real(num_basis, op_idx0, x))
         vec0_imag = np.array(whole_vec_imag(num_basis, op_idx0, x))
-        vec1_real = np.array(whole_vec_imag(num_basis, op_idx1, x))
+        vec1_real = np.array(whole_vec_real(num_basis, op_idx1, x))
         vec1_imag = np.array(whole_vec_imag(num_basis, op_idx1, x))
-        return np.inner(vec0_real, vec1_imag) + np.inner(vec0_imag, vec1_real)
+        return np.inner(vec0_real, vec1_imag) - np.inner(vec0_imag, vec1_real)
 
     for i, j in combinations(list(range(num_ops)), 2):
         constraints.append(
