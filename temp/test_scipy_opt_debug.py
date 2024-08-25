@@ -44,26 +44,7 @@ def test_idea():
     coeffs = []
 
     # TODO Change for general case
-    for s1, s2 in combinations(states, 2):
-        A = [s1.data, s2.data]
-        null_s = null_space(np.array(A))
-        null_spaces.append(null_s)
-
-        # Verify our calculation
-        # print(np.round(np.dot(s1.data, null_s[:, 0]), 4))
-        # print(np.round(np.dot(s1.data, null_s[:, 1]), 4))
-        # print(np.round(np.dot(s2.data, null_s[:, 0]), 4))
-        # print(np.round(np.dot(s2.data, null_s[:, 1]), 4))
-
-        # TODO
-        # Is the number of basis vectors = num_states - 1?
-        # Should be 2 ** n - 2
-        for i in range(2**n - 2):
-            basis = null_s[:, i]
-            basis_real = [np.real(num) for num in basis]
-            basis_imag = [np.imag(num) for num in basis]
-            coeffs.append(basis_real)
-            coeffs.append(basis_imag)
+    find_null_spaces(n, states, null_spaces, coeffs)
 
     # pprint.pprint(coeffs)
     print(len(coeffs))
@@ -207,6 +188,30 @@ def test_idea():
     # )
     print(result)
     return
+
+
+def find_null_spaces(n, states, null_spaces, coeffs):
+    for s1, s2 in combinations(states, 2):
+        # TODO exclude the target state
+        A = [s1.data, s2.data]
+        null_s = null_space(np.array(A))
+        null_spaces.append(null_s)
+
+        # Verify our calculation
+        # print(np.round(np.dot(s1.data, null_s[:, 0]), 4))
+        # print(np.round(np.dot(s1.data, null_s[:, 1]), 4))
+        # print(np.round(np.dot(s2.data, null_s[:, 0]), 4))
+        # print(np.round(np.dot(s2.data, null_s[:, 1]), 4))
+
+        # TODO
+        # Is the number of basis vectors = num_states - 1?
+        # Should be 2 ** n - 2
+        for i in range(2**n - 2):
+            basis = null_s[:, i]
+            basis_real = [np.real(num) for num in basis]
+            basis_imag = [np.imag(num) for num in basis]
+            coeffs.append(basis_real)
+            coeffs.append(basis_imag)
     # Recursively define the constraints
     # a = np.dot(states[2].data, null_s[:, 0])
     # b = np.dot(states[2].data, null_s[:, 1])
