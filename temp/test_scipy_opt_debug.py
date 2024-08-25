@@ -215,17 +215,7 @@ def find_null_spaces(n, states, null_spaces, coeffs):
     # Recursively define the constraints
     # a = np.dot(states[2].data, null_s[:, 0])
     # b = np.dot(states[2].data, null_s[:, 1])
-    # print(np.round(a, 4))
-    # print(np.round(b, 4))
-    # print(np.round(np.abs(a), 4))
-    # print(np.round(np.abs(b), 4))
-
-    # Recursively define the objective
-
-    def find_PVM():
-        return
-
-    return
+    # Check null basis vdot states
 
 
 if __name__ == "__main__":
