@@ -164,63 +164,6 @@ def test_idea():
             NonlinearConstraint(partial(mult_vec_and_vec_imag, num_basis, i, j), 0, 0)
         )
 
-    def cons_fun(coeffs, v_real, v_imag):
-        sum_r = [0 for _ in range(2**n)]
-        sum_i = [0 for _ in range(2**n)]
-        for i in range(len(coeffs) // 2):  # TODO Not quite right
-            print(i)
-            sum_r = map(
-                add,
-                sum_r,
-                [
-                    coeffs[2 * i][_] * v_real[i] - coeffs[2 * i + 1][_] * v_imag[i]
-                    for _ in range(2**n)
-                ],
-            )
-            sum_i = map(
-                add,
-                sum_i,
-                [
-                    coeffs[2 * i][_] * v_imag[i] + coeffs[2 * i + 1][_] * v_real[i]
-                    for _ in range(2**n)
-                ],
-            )
-        # sum_r == 0
-        # sum_i == 0
-        return sum_r, sum_i
-
-    # a, b = cons_fun(coeffs, [1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1])
-    # print(np.array(list(a)))
-    # print(np.array(list(b)))
-
-    # def obj_fun(some_params, coeffs, v_real, v_imag):
-    #     # Break states.data to real and imag parts
-    #
-    #     sum_r = [0 for _ in range(2**n)]
-    #     sum_i = [0 for _ in range(2**n)]
-    #     for i in range(len(coeffs) // 2):
-    #         # inner product with corresponding target vector to compute loss
-    #         print(i)
-    #         sum_r = map(
-    #             add,
-    #             sum_r,
-    #             [
-    #                 coeffs[2 * i][_] * v_real[i] - coeffs[2 * i + 1][_] * v_imag[i]
-    #                 for _ in range(2**n)
-    #             ],
-    #         )
-    #         sum_i = map(
-    #             add,
-    #             sum_i,
-    #             [
-    #                 coeffs[2 * i][_] * v_imag[i] + coeffs[2 * i + 1][_] * v_real[i]
-    #                 for _ in range(2**n)
-    #             ],
-    #         )
-    #     # sum_r == 0
-    #     # sum_i == 0
-    #     return 1 - 0
-
     # Solve for a better null vector such that
     # a = np.dot(states[2].data, n_s[:, 0] * x0 + n_s[:, 1] * x1) is max
 
