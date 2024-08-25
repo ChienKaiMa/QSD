@@ -1,34 +1,287 @@
 import numpy as np
 from itertools import combinations
 from functools import partial
-from scipy.optimize import NonlinearConstraint
+from scipy.optimize import NonlinearConstraint, OptimizeResult, minimize
 from scipy.linalg import null_space
-from cobyqa import minimize
+import cobyqa
 from qiskit.quantum_info import random_statevector
 
-
-def gen_states(
-    num_qubits: int,
-    num_states: int,
-    **kwargs,
-):
-    assert num_qubits > 0
-    assert num_states > 1
-    states = []
-    # TODO
-    states = [random_statevector(2**num_qubits, seed=_) for _ in range(num_states)]
-    return states
+# https://stackoverflow.com/questions/55132107/scipy-fitting-with-parameters-in-a-vector
+from operator import add
 
 
-def test_idea():
-    np.set_printoptions(precision=4)
-    num_states = 3
-    n = 2
-    states = gen_states(n, num_states=num_states)
-    # print(states)
-    prods = []
-    for s1, s2 in combinations(states, 2):
-        prods.append(abs(s1.inner(s2)))
+# TODO Come up with a better class name
+class NullSpaceSearchProblem:
+    def __init__(self, num_qubits, num_states):
+        assert num_qubits > 0
+        assert num_states > 1
+        self.num_qubits = num_qubits
+        self.num_states = num_states
+        self.num_amps = 2**num_qubits
+        self.num_ops = num_states
+        self.num_basis = 2**num_qubits - (num_states - 1)
+        self.num_vars_per_op = self.num_basis * 2
+        self.num_vars = self.num_ops * self.num_basis * 2
+        self.num_coeffs = self.num_vars * self.num_amps
+        self.states = []
+        self.null_spaces = []
+        self.null_coeffs = []
+        self.constraints = []
+        self.x0 = 0
+        self.x = 0
+
+    @staticmethod
+    def gen_states(
+        num_qubits: int,
+        num_states: int,
+        **kwargs,
+    ):
+        assert num_qubits > 0
+        assert num_states > 1
+        states = []
+        # TODO Consider setting seeds from the arguments
+        states = [random_statevector(2**num_qubits, seed=_) for _ in range(num_states)]
+        return states
+
+    def set_states(self, states=None):
+        if self.states != []:
+            print(
+                "Warning: The states are already set. This method call will do nothing."
+            )
+            return
+        elif states is None:
+            print("Info: No states are provided. The states will be generated.")
+            self.states = self.gen_states(
+                num_qubits=self.num_qubits,
+                num_states=self.num_states,
+            )
+        else:
+            self.states = states.copy()
+        return
+
+    def find_null_spaces(self):
+        null_spaces = []
+        for s1, s2 in combinations(self.states, 2):
+            # TODO exclude the target state
+            A = [s1.data, s2.data]
+
+            null_s = null_space(np.array(A))
+            null_spaces.append(null_s)
+
+            # Verify our calculation
+            # print(np.round(np.dot(s1.data, null_s[:, 0]), 4))
+            # print(np.round(np.dot(s1.data, null_s[:, 1]), 4))
+            # print(np.round(np.dot(s2.data, null_s[:, 0]), 4))
+            # print(np.round(np.dot(s2.data, null_s[:, 1]), 4))
+
+            for i in range(self.num_basis):
+                basis = null_s[:, i]
+                basis_real = [np.real(num) for num in basis]
+                basis_imag = [np.imag(num) for num in basis]
+                self.null_coeffs.append(basis_real)
+                self.null_coeffs.append(basis_imag)
+        # Recursively define the constraints
+        # a = np.dot(states[2].data, null_s[:, 0])
+        # b = np.dot(states[2].data, null_s[:, 1])
+        # Check null basis vdot states
+        self.null_spaces = null_spaces.copy()
+
+    def whole_vec_real(self, op_idx, x):
+        # Assume null_coeffs is not empty
+        # Linear combination of the basis vectors
+        # to form a different unit vector in the null space
+        sum_real = [0 for _ in range(self.num_amps)]
+        for i in range(self.num_basis):
+            idx = op_idx * self.num_vars_per_op + 2 * i
+            v_real = x[idx]
+            v_imag = x[idx + 1]
+            c_real = self.null_coeffs[idx]
+            c_imag = self.null_coeffs[idx + 1]
+            # print(i)
+            sum_real = map(
+                add,
+                sum_real,
+                [c_real[_] * v_real - c_imag[_] * v_imag for _ in range(self.num_amps)],
+            )
+        return list(sum_real)
+
+    def whole_vec_imag(self, op_idx, x):
+        # Assume null_coeffs is not empty
+        # Linear combination of the basis vectors
+        # to form a different unit vector in the null space
+        sum_imag = [0 for _ in range(self.num_amps)]
+        for i in range(self.num_basis):
+            idx = op_idx * self.num_vars_per_op + 2 * i
+            v_real = x[idx]
+            v_imag = x[idx + 1]
+            c_real = self.null_coeffs[idx]
+            c_imag = self.null_coeffs[idx + 1]
+            # print(i)
+            sum_imag = map(
+                add,
+                sum_imag,
+                [c_real[_] * v_imag + c_imag[_] * v_real for _ in range(self.num_amps)],
+            )
+        return list(sum_imag)
+
+    def mult_vec_and_vec_real(self, op_idx0, op_idx1, x):
+        vec0_real = np.array(self.whole_vec_real(op_idx0, x))
+        vec0_imag = np.array(self.whole_vec_imag(op_idx0, x))
+        vec1_real = np.array(self.whole_vec_real(op_idx1, x))
+        vec1_imag = np.array(self.whole_vec_imag(op_idx1, x))
+        return np.inner(vec0_real, vec1_real) + np.inner(vec0_imag, vec1_imag)
+
+    def mult_vec_and_vec_imag(self, op_idx0, op_idx1, x):
+        vec0_real = np.array(self.whole_vec_real(op_idx0, x))
+        vec0_imag = np.array(self.whole_vec_imag(op_idx0, x))
+        vec1_real = np.array(self.whole_vec_real(op_idx1, x))
+        vec1_imag = np.array(self.whole_vec_imag(op_idx1, x))
+        return np.inner(vec0_real, vec1_imag) - np.inner(vec0_imag, vec1_real)
+
+    def op_con(self, op_idx, x):
+        # TODO Preserve LC of unit = unit vector
+        s = 0
+        for j in range(self.num_basis):
+            idx = op_idx * self.num_vars_per_op + 2 * j
+            s += x[idx] ** 2 + x[idx + 1] ** 2
+        return s
+
+    def con(self, i, x):
+        return x[2 * i] ** 2 + x[2 * i + 1] ** 2
+
+    def build_cons(self):
+        self.constraints = []
+
+        for i, j in combinations(list(range(self.num_ops)), 2):
+            self.constraints.append(
+                NonlinearConstraint(partial(self.mult_vec_and_vec_real, i, j), 0, 0)
+            )
+            self.constraints.append(
+                NonlinearConstraint(partial(self.mult_vec_and_vec_imag, i, j), 0, 0)
+            )
+
+        for i in range(self.num_ops):
+            self.constraints.append(NonlinearConstraint(partial(self.op_con, i), 1, 1))
+            # constraints.append(NonlinearConstraint(partial(op_con, i), 0.85, 1))
+
+        # TODO this one is not actually required?
+        for i in range(self.num_vars // 2):
+            self.constraints.append(NonlinearConstraint(partial(self.con, i), 0, 1))
+
+        # self.constraints = constraints.copy()
+        return
+
+    def mult_vec_and_state_real(self, op_idx, x):
+        # TODO Access the coeffs of the state data for obj
+        # Sum everything after mult
+        # TODO Check the signs
+        s_real = np.array([i.real for i in self.states[op_idx].data])
+        s_imag = np.array([i.imag for i in self.states[op_idx].data])
+        vec_real = np.array(self.whole_vec_real(self.num_ops - 1 - op_idx, x))
+        vec_imag = np.array(self.whole_vec_imag(self.num_ops - 1 - op_idx, x))
+        final_real = np.inner(s_real, vec_real) - np.inner(s_imag, vec_imag)
+        final_imag = np.inner(s_real, vec_imag) + np.inner(s_imag, vec_real)
+        return final_real**2 + final_imag**2
+
+    def obj(self, x):
+        # The final objective function
+        s = 0
+        for i in range(self.num_ops):
+            s += self.mult_vec_and_state_real(i, x)
+        return s
+
+    def find_init(self, method=None):
+        # x0 = np.zeros(num_vars)
+        # TODO Find a better initial point with brute-force heuristic
+        self.x0 = [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0]
+        self.x0 = [0.5 for i in range(12)]
+        self.x0 = [-0.5 for i in range(12)]
+        self.x0 = [-0.5 for i in range(6)] + [0.5 for i in range(6)]
+        return
+
+    def solve(self, method="COBYQA", **options):
+        assert self.x0 != 0
+        if method == "COBYQA":
+            result: OptimizeResult = cobyqa.minimize(
+                fun=self.obj,
+                x0=self.x0,
+                constraints=self.constraints,
+                options={
+                    "target": 0,
+                    "maxfev": 30000,
+                    # "disp": True,
+                    # "radius_init": 0.6,
+                },
+                decrease_radius_factor=0.3,
+                # increase_radius_factor=4.0,
+            )
+        elif method == "SLSQP":
+            result = minimize(
+                fun=self.obj,
+                x0=self.x0,
+                constraints=self.constraints,
+                method="SLSQP",
+                options={
+                    "maxiter": 40000,
+                },
+            )
+        elif method == "Nelder-Mead":
+            result = minimize(
+                fun=self.obj,
+                x0=self.x0,
+                constraints=self.constraints,
+                method="Nelder-Mead",
+                options={
+                    "maxiter": 40000,
+                },
+            )
+        print(result)
+        self.x = result["x"]
+        print(self.x)
+        return
+
+    def solve_feas(self, method="COBYQA", **options):
+        # Solve feasibility problem
+        return
+
+    def verify(self):
+        # s = 0
+        final_ops = []
+        for op_idx in range(self.num_ops):
+            vec = 0
+            for j in range(self.num_basis):
+                basis = self.null_spaces[op_idx][:, j]
+                # print(basis)
+                idx = op_idx * self.num_vars_per_op + 2 * j
+                vec += basis * (self.x[idx] + self.x[idx + 1] * 1j)
+            # print(vec)
+            final_ops.append(vec)
+        for o1, o2 in combinations(final_ops, 2):
+            print("vdot:", np.round(np.vdot(o1, o2), 4))
+            # print("dot :", np.round(np.dot(o1, o2), 4))
+            # idx = op_idx * num_vars_per_op + 2 * j
+            # s += x[idx] ** 2 + x[idx + 1] ** 2
+        for i in range(self.num_ops):
+            print("unit:", round(self.op_con(i, self.x), 4))
+        return
+
+    @staticmethod
+    def test():
+        np.set_printoptions(precision=4)
+        prob = NullSpaceSearchProblem(num_qubits=2, num_states=3)
+        prob.set_states()
+        # print(prob.states)
+        prob.find_null_spaces()
+        prob.build_cons()
+        prob.find_init()
+        prob.solve()
+        prob.verify()
+
+        return
+
+    # prods = []
+    # for s1, s2 in combinations(states, 2):
+    #     prods.append(abs(s1.inner(s2)))
     # print(prods)
 
     # Obtain every null space for each set of orthonormal basis
@@ -38,124 +291,17 @@ def test_idea():
     coeffs = []
 
     # TODO Change for general case
-    find_null_spaces(n, states, null_spaces, coeffs)
 
-    # pprint.pprint(coeffs)
-    print(len(coeffs))
-
-    for i in range(12):
-        print(np.array(coeffs[i]))
+    # for i in range(12):
+    #     print(np.array(coeffs[i]))
     # print(np.array(coeffs[1]))
 
     # TODO Check the formula
     # num_coeffs = C(num_states, 1) * (2 ** n - s + 1) * 2 * 2**n
     # num_vars   = C(num_states, 1) * (2 ** n - s + 1) * 2
 
-    num_amps = 2**n
-    num_ops = num_states
-    num_basis = 2**n - (num_states - 1)
-    num_vars_per_op = num_basis * 2
-    num_vars = num_ops * num_basis * 2
-    num_coeffs = num_vars * num_amps
-    constraints = []
-
-    # https://stackoverflow.com/questions/55132107/scipy-fitting-with-parameters-in-a-vector
-    from operator import add
-
-    def whole_vec_real(num_basis, op_idx, x):
-        # Linear combination of the basis vectors
-        # to form a different unit vector in the null space
-        sum_real = [0 for _ in range(num_amps)]
-        for i in range(num_basis):
-            idx = op_idx * num_vars_per_op + 2 * i
-            v_real = x[idx]
-            v_imag = x[idx + 1]
-            c_real = coeffs[idx]
-            c_imag = coeffs[idx + 1]
-            # print(i)
-            sum_real = map(
-                add,
-                sum_real,
-                [c_real[_] * v_real - c_imag[_] * v_imag for _ in range(num_amps)],
-            )
-        return list(sum_real)
-
-    def whole_vec_imag(num_basis, op_idx, x):
-        # Linear combination of the basis vectors
-        # to form a different unit vector in the null space
-        sum_imag = [0 for _ in range(num_amps)]
-        for i in range(num_basis):
-            idx = op_idx * num_vars_per_op + 2 * i
-            v_real = x[idx]
-            v_imag = x[idx + 1]
-            c_real = coeffs[idx]
-            c_imag = coeffs[idx + 1]
-            # print(i)
-            sum_imag = map(
-                add,
-                sum_imag,
-                [c_real[_] * v_imag + c_imag[_] * v_real for _ in range(num_amps)],
-            )
-        return list(sum_imag)
-
-    def mult_vec_and_state_real(states, num_basis, op_idx, x):
-        # TODO Access the coeffs of the state data for obj
-        # Sum everything after mult
-        # TODO Check the signs
-        s_real = np.array([i.real for i in states[op_idx].data])
-        s_imag = np.array([i.imag for i in states[op_idx].data])
-        vec_real = np.array(whole_vec_real(num_basis, num_ops - 1 - op_idx, x))
-        vec_imag = np.array(whole_vec_imag(num_basis, num_ops - 1 - op_idx, x))
-        final_real = np.inner(s_real, vec_real) - np.inner(s_imag, vec_imag)
-        final_imag = np.inner(s_real, vec_imag) + np.inner(s_imag, vec_real)
-        return final_real**2 + final_imag**2
-
-    def obj(num_basis, x):
-        # The final objective function
-        s = 0
-        for i in range(num_ops):
-            s += mult_vec_and_state_real(states, num_basis, i, x)
-        return s
-
-    def mult_vec_and_vec_real(num_basis, op_idx0, op_idx1, x):
-        vec0_real = np.array(whole_vec_real(num_basis, op_idx0, x))
-        vec0_imag = np.array(whole_vec_imag(num_basis, op_idx0, x))
-        vec1_real = np.array(whole_vec_real(num_basis, op_idx1, x))
-        vec1_imag = np.array(whole_vec_imag(num_basis, op_idx1, x))
-        return np.inner(vec0_real, vec1_real) + np.inner(vec0_imag, vec1_imag)
-
-    def mult_vec_and_vec_imag(num_basis, op_idx0, op_idx1, x):
-        vec0_real = np.array(whole_vec_real(num_basis, op_idx0, x))
-        vec0_imag = np.array(whole_vec_imag(num_basis, op_idx0, x))
-        vec1_real = np.array(whole_vec_real(num_basis, op_idx1, x))
-        vec1_imag = np.array(whole_vec_imag(num_basis, op_idx1, x))
-        return np.inner(vec0_real, vec1_imag) - np.inner(vec0_imag, vec1_real)
-
-    for i, j in combinations(list(range(num_ops)), 2):
-        constraints.append(
-            NonlinearConstraint(partial(mult_vec_and_vec_real, num_basis, i, j), 0, 0)
-        )
-        constraints.append(
-            NonlinearConstraint(partial(mult_vec_and_vec_imag, num_basis, i, j), 0, 0)
-        )
-
     # Solve for a better null vector such that
     # a = np.dot(states[2].data, n_s[:, 0] * x0 + n_s[:, 1] * x1) is max
-
-    # TODO Preserve LC of unit = unit vector
-    def op_con(op_idx, x):
-        s = 0
-        for j in range(num_basis):
-            idx = op_idx * num_vars_per_op + 2 * j
-            s += x[idx] ** 2 + x[idx + 1] ** 2
-        return s
-
-    for i in range(num_ops):
-        constraints.append(NonlinearConstraint(partial(op_con, i), 1, 1))
-
-    for i in range(num_vars // 2):
-        con = lambda x: x[2 * i] ** 2 + x[2 * i + 1] ** 2
-        constraints.append(NonlinearConstraint(con, 0, 1))
 
     # TODO define callback
     def callbackF(Xi):
@@ -163,54 +309,6 @@ def test_idea():
         # print '{0:4d}   {1: 3.6f}   {2: 3.6f}   {3: 3.6f}   {4: 3.6f}'.format(Nfeval, Xi[0], Xi[1], Xi[2], rosen(Xi))
         Nfeval += 1
 
-    # x0 = np.zeros(num_vars)
-    x0 = [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0]
-    result = minimize(
-        fun=partial(obj, num_basis),
-        x0=x0,
-        constraints=constraints,
-        options={
-            "maxfev": 30000,
-            "disp": True,
-        },
-    )
-    # result = minimize(
-    #     fun=partial(obj, num_basis),
-    #     x0=x0,
-    #     constraints=constraints,
-    #     method="COBYQA",
-    # )
-    print(result)
-    return
-
-
-def find_null_spaces(n, states, null_spaces, coeffs):
-    for s1, s2 in combinations(states, 2):
-        # TODO exclude the target state
-        A = [s1.data, s2.data]
-        null_s = null_space(np.array(A))
-        null_spaces.append(null_s)
-
-        # Verify our calculation
-        # print(np.round(np.dot(s1.data, null_s[:, 0]), 4))
-        # print(np.round(np.dot(s1.data, null_s[:, 1]), 4))
-        # print(np.round(np.dot(s2.data, null_s[:, 0]), 4))
-        # print(np.round(np.dot(s2.data, null_s[:, 1]), 4))
-
-        # TODO
-        # Is the number of basis vectors = num_states - 1?
-        # Should be 2 ** n - 2
-        for i in range(2**n - 2):
-            basis = null_s[:, i]
-            basis_real = [np.real(num) for num in basis]
-            basis_imag = [np.imag(num) for num in basis]
-            coeffs.append(basis_real)
-            coeffs.append(basis_imag)
-    # Recursively define the constraints
-    # a = np.dot(states[2].data, null_s[:, 0])
-    # b = np.dot(states[2].data, null_s[:, 1])
-    # Check null basis vdot states
-
 
 if __name__ == "__main__":
-    test_idea()
+    NullSpaceSearchProblem.test()
