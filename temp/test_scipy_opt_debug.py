@@ -61,9 +61,12 @@ class NullSpaceSearchProblem:
 
     def find_null_spaces(self):
         null_spaces = []
-        for s1, s2 in combinations(self.states, 2):
-            # TODO exclude the target state
-            A = [s1.data, s2.data]
+        # Exclude the target state
+        for j in range(self.num_states):
+            A = []
+            for i in range(self.num_states):
+                if i != j:
+                    A.append(self.states[i].data)
 
             null_s = null_space(np.array(A))
             null_spaces.append(null_s)
@@ -177,8 +180,8 @@ class NullSpaceSearchProblem:
         # TODO Check the signs
         s_real = np.array([i.real for i in self.states[op_idx].data])
         s_imag = np.array([i.imag for i in self.states[op_idx].data])
-        vec_real = np.array(self.whole_vec_real(self.num_ops - 1 - op_idx, x))
-        vec_imag = np.array(self.whole_vec_imag(self.num_ops - 1 - op_idx, x))
+        vec_real = np.array(self.whole_vec_real(op_idx, x))
+        vec_imag = np.array(self.whole_vec_imag(op_idx, x))
         final_real = np.inner(s_real, vec_real) - np.inner(s_imag, vec_imag)
         final_imag = np.inner(s_real, vec_imag) + np.inner(s_imag, vec_real)
         return final_real**2 + final_imag**2
