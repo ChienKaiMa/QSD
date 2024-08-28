@@ -190,14 +190,28 @@ class NullSpaceSearchProblem:
             s += self.mult_vec_and_state_real(i, x)
         return s
 
-    def find_init(self, method=None):
-        # x0 = np.zeros(num_vars)
-        # TODO Find a better initial point with brute-force heuristic
-        self.x0 = [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0]
-        self.x0 = [0.5 for i in range(12)]
-        self.x0 = [-0.5 for i in range(12)]
-        self.x0 = [-0.5 for i in range(6)] + [0.5 for i in range(6)]
+    def set_init(self, x):
+        self.x0 = x.copy()
         return
+
+    def find_init(self, method=None):
+        if method == "zero":
+            self.x0 = np.zeros(self.num_vars)
+        # TODO Find a better initial point with brute-force heuristic
+        else:
+            x = np.random.random_sample(self.num_vars) * 2 - 1
+            self.x0 = self.norm_vars(x)
+        return
+
+    def norm_vars(self, x, inplace=False):
+        """Normalize the variable vector to make sure the combined vector is unit length."""
+        x_unit = []
+        for j in range(0, self.num_vars, self.num_vars_per_op):
+            x_slice = x[j : j + self.num_vars_per_op]
+            r = np.linalg.norm(x_slice)
+            x_slice_unit = np.multiply(x_slice, 1 / r)
+            x_unit.extend(x_slice_unit)
+        return x_unit
 
     def solve(self, method="COBYQA", **options):
         assert self.x0 != 0
