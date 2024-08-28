@@ -268,24 +268,40 @@ class NullSpaceSearchProblem:
     def verify(self):
         if type(self.x) is int:
             return False
-        # s = 0
+
+        final_ops = self.calc_final_ops()
+        almost = 0
+        success = 0
+        for o1, o2 in combinations(final_ops, 2):
+            vdot = np.round(np.vdot(o1, o2), 4)
+            if 0.3 < np.abs(vdot) <= 0.5:
+                almost += 1
+            elif np.abs(vdot) <= 0.3:
+                success += 1
+            print("vdot:", vdot)
+        for i in range(self.num_ops):
+            print("unit:", round(self.op_con(i, self.x), 4))
+        if success == self.num_ops:
+            print("Success (all <= 0.3)")
+            return True
+        elif almost + success == self.num_ops:
+            print("Almost (all <= 0.5)")
+            print(f"almost (<= 0.5): {almost}, success (<= 0.3): {success}")
+            return False
+        else:
+            return False
+
+    def calc_final_ops(self):
         final_ops = []
         for op_idx in range(self.num_ops):
             vec = 0
             for j in range(self.num_basis):
                 basis = self.null_spaces[op_idx][:, j]
-                # print(basis)
                 idx = op_idx * self.num_vars_per_op + 2 * j
                 vec += basis * (self.x[idx] + self.x[idx + 1] * 1j)
-            # print(vec)
             final_ops.append(vec)
-        for o1, o2 in combinations(final_ops, 2):
-            print("vdot:", np.round(np.vdot(o1, o2), 4))
-            # print("dot :", np.round(np.dot(o1, o2), 4))
-            # idx = op_idx * num_vars_per_op + 2 * j
-            # s += x[idx] ** 2 + x[idx + 1] ** 2
-        for i in range(self.num_ops):
-            print("unit:", round(self.op_con(i, self.x), 4))
+        return final_ops
+
     @staticmethod
     def test_lin_indep():
         np.set_printoptions(precision=4)
