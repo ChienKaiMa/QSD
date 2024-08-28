@@ -211,7 +211,7 @@ class NullSpaceSearchProblem:
         return x_unit
 
     def solve(self, method="COBYQA", **options):
-        assert self.x0 != 0
+        assert type(self.x0) == list
         if method == "COBYQA":
             result: OptimizeResult = cobyqa.minimize(
                 fun=self.obj,
@@ -266,6 +266,8 @@ class NullSpaceSearchProblem:
         print("#states =", self.num_states)
 
     def verify(self):
+        if type(self.x) is int:
+            return False
         # s = 0
         final_ops = []
         for op_idx in range(self.num_ops):
