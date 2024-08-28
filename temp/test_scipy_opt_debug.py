@@ -312,28 +312,6 @@ class NullSpaceSearchProblem:
         return
 
     # prods = []
-    # for s1, s2 in combinations(states, 2):
-    #     prods.append(abs(s1.inner(s2)))
-    # print(prods)
-
-    # Obtain every null space for each set of orthonormal basis
-    null_spaces = []
-
-    # coeffs is a complicated list of coefficients
-    coeffs = []
-
-    # TODO Change for general case
-
-    # for i in range(12):
-    #     print(np.array(coeffs[i]))
-    # print(np.array(coeffs[1]))
-
-    # TODO Check the formula
-    # num_coeffs = C(num_states, 1) * (2 ** n - s + 1) * 2 * 2**n
-    # num_vars   = C(num_states, 1) * (2 ** n - s + 1) * 2
-
-    # Solve for a better null vector such that
-    # a = np.dot(states[2].data, n_s[:, 0] * x0 + n_s[:, 1] * x1) is max
 
     # TODO define callback
     def callbackF(Xi):
