@@ -244,6 +244,16 @@ class NullSpaceSearchProblem:
         # Solve feasibility problem
         return
 
+    def is_lin_indep(self):
+        """Check the vectors are linearly independent."""
+        l = []
+        for i in range(self.num_states):
+            l.append(self.states[i].data)
+        m = np.array(l)
+        rank = np.linalg.matrix_rank(m)
+        print("Rank =", rank)
+        print("#states =", self.num_states)
+
     def verify(self):
         # s = 0
         final_ops = []
@@ -263,7 +273,12 @@ class NullSpaceSearchProblem:
             # s += x[idx] ** 2 + x[idx + 1] ** 2
         for i in range(self.num_ops):
             print("unit:", round(self.op_con(i, self.x), 4))
-        return
+    @staticmethod
+    def test_lin_indep():
+        np.set_printoptions(precision=4)
+        prob = NullSpaceSearchProblem(num_qubits=2, num_states=3)
+        prob.set_states()
+        prob.is_lin_indep()
 
     @staticmethod
     def test():
