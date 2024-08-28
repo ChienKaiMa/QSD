@@ -71,12 +71,6 @@ class NullSpaceSearchProblem:
             null_s = null_space(np.array(A))
             null_spaces.append(null_s)
 
-            # Verify our calculation
-            # print(np.round(np.dot(s1.data, null_s[:, 0]), 4))
-            # print(np.round(np.dot(s1.data, null_s[:, 1]), 4))
-            # print(np.round(np.dot(s2.data, null_s[:, 0]), 4))
-            # print(np.round(np.dot(s2.data, null_s[:, 1]), 4))
-
             for i in range(self.num_basis):
                 basis = null_s[:, i]
                 basis_real = [np.real(num) for num in basis]
