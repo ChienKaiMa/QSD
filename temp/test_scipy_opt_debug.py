@@ -4,7 +4,7 @@ from functools import partial
 from scipy.optimize import NonlinearConstraint, OptimizeResult, minimize
 from scipy.linalg import null_space
 import cobyqa
-from qiskit.quantum_info import random_statevector
+from qiskit.quantum_info import random_statevector, Statevector
 
 # https://stackoverflow.com/questions/55132107/scipy-fitting-with-parameters-in-a-vector
 from operator import add
@@ -251,6 +251,16 @@ class NullSpaceSearchProblem:
         print(self.x)
         return
 
+    def expand_solve(self):
+        # Extend states
+        states = self.states
+        for i in range(self.num_states):
+            states[i] = states[i].expand(Statevector([1, 0]))
+            # print(states[i].data)
+        self.__init__(num_qubits=self.num_qubits + 1, num_states=self.num_states)
+        self.set_states(states=states)
+        return
+
     def solve_feas(self, method="COBYQA", **options):
         # Solve feasibility problem
         return
@@ -321,6 +331,38 @@ class NullSpaceSearchProblem:
         prob.solve()
         prob.verify()
 
+        return
+
+
+    @staticmethod
+    def test_expand_solve():
+        np.set_printoptions(precision=4)
+        prob = NullSpaceSearchProblem(num_qubits=2, num_states=3)
+        prob.set_states()
+        prob.expand_solve()
+        prob.find_null_spaces()
+        prob.build_cons()
+        num_samples = 0
+        stop = False
+        while not stop:
+            num_samples += 1
+            print(num_samples)
+            x = np.random.random_sample(prob.num_vars) * 2 - 1
+            x_unit = []
+            for j in range(0, prob.num_vars, prob.num_vars_per_op):
+                x_slice = x[j : j + prob.num_vars_per_op]
+                r = np.linalg.norm(x_slice)
+                x_slice_unit = np.multiply(x_slice, 1 / r)
+                x_unit.extend(x_slice_unit)
+            # TODO Normalize by pairs, not all of them!
+            prob.set_init(x=x_unit)
+            # prob.solve(method="SLSQP")
+            prob.solve()
+            # prob.x = np.array(x_unit)
+            prob.x = prob.norm_vars(prob.x)
+            stop = prob.verify()
+        print(num_samples)
+        print(prob.x)
         return
 
     # prods = []
