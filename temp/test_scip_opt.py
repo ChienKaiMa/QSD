@@ -281,10 +281,11 @@ class NullSpaceSearchProblem:
             print("vdot:", vdot)
         for i in range(self.num_ops):
             print("unit:", round(self.op_con(i, self.x), 4))
-        if success == self.num_ops:
+        num_pairs = int(self.num_ops * (self.num_ops - 1) / 2)
+        if success == num_pairs:
             print("Success (all <= 0.3)")
             return True
-        elif almost + success == self.num_ops:
+        elif almost + success == num_pairs:
             print("Almost (all <= 0.5)")
             print(f"almost (<= 0.5): {almost}, success (<= 0.3): {success}")
             return False
