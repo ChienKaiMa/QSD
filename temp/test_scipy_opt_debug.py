@@ -68,7 +68,7 @@ class NullSpaceSearchProblem:
                 if i != j:
                     A.append(self.states[i].data)
 
-            null_s = null_space(np.array(A))
+            null_s = null_space(np.conj(np.array(A)))
             null_spaces.append(null_s)
 
             for i in range(self.num_basis):
