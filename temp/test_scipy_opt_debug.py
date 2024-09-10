@@ -390,17 +390,9 @@ class NullSpaceSearchProblem:
         while not stop:
             num_samples += 1
             print(num_samples)
-            x = np.random.random_sample(prob.num_vars) * 2 - 1
-            x_unit = []
-            for j in range(0, prob.num_vars, prob.num_vars_per_op):
-                x_slice = x[j : j + prob.num_vars_per_op]
-                r = np.linalg.norm(x_slice)
-                x_slice_unit = np.multiply(x_slice, 1 / r)
-                x_unit.extend(x_slice_unit)
-            # TODO Normalize by pairs, not all of them!
-            prob.set_init(x=x_unit)
-            # prob.solve(method="SLSQP")
-            prob.solve()
+            prob.find_init()
+            prob.solve(method="SLSQP")
+            # prob.solve()
             # prob.x = np.array(x_unit)
             prob.x = prob.norm_vars(prob.x)
             stop = prob.verify()
