@@ -185,7 +185,7 @@ class NullSpaceSearchProblem:
         s = 0
         for i in range(self.num_ops):
             s += self.mult_vec_and_state_real(i, x)
-        return s
+        return -s
 
     def set_init(self, x):
         self.x0 = x.copy()
