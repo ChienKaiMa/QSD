@@ -234,6 +234,7 @@ class NullSpaceSearchProblem:
                 method="SLSQP",
                 options={
                     "maxiter": 40000,
+                    "ftol": 1e-10,
                 },
             )
         elif method == "Nelder-Mead":
