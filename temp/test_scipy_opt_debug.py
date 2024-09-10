@@ -10,6 +10,7 @@ from qiskit.quantum_info import random_statevector, Statevector
 from operator import add
 
 import cvxpy as cp
+import sys
 
 
 # TODO Come up with a better class name
@@ -36,13 +37,31 @@ class NullSpaceSearchProblem:
     def gen_states(
         num_qubits: int,
         num_states: int,
+        seeds: list[int] = [],
         **kwargs,
     ):
         assert num_qubits > 0
         assert num_states > 1
         states = []
-        # TODO Consider setting seeds from the arguments
-        states = [random_statevector(2**num_qubits, seed=_) for _ in range(num_states)]
+        # TODO Sparse option
+        if len(seeds):
+            # Setting seeds from the arguments
+            # TODO Check duplicates in seeds
+            if len(seeds) == num_qubits:
+                states = [
+                    random_statevector(2**num_qubits, seed=seeds[_])
+                    for _ in range(num_states)
+                ]
+            else:
+                print(
+                    f"The number of provided seeds ({len(seeds)}) does not match the number of states ({num_states})",
+                    file=sys.stderr,
+                )
+        else:
+            # Use range as seeds
+            states = [
+                random_statevector(2**num_qubits, seed=_) for _ in range(num_states)
+            ]
         return states
 
     def set_states(self, states=None):
