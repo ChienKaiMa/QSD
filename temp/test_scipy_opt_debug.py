@@ -9,6 +9,8 @@ from qiskit.quantum_info import random_statevector, Statevector
 # https://stackoverflow.com/questions/55132107/scipy-fitting-with-parameters-in-a-vector
 from operator import add
 
+import cvxpy as cp
+
 
 # TODO Come up with a better class name
 class NullSpaceSearchProblem:
