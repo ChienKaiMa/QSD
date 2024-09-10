@@ -374,6 +374,86 @@ class NullSpaceSearchProblem:
         # print '{0:4d}   {1: 3.6f}   {2: 3.6f}   {3: 3.6f}   {4: 3.6f}'.format(Nfeval, Xi[0], Xi[1], Xi[2], rosen(Xi))
         Nfeval += 1
 
+    def apply_Eldar(self, prior_prob=None, min_prob=0):
+        """Apply the method in Eldar's paper in 2003."""
+        np.set_printoptions(precision=4)
+        n = self.num_states
+        if prior_prob is None:
+            prior_prob = np.ones(n) * (-1 / n)
+
+        A = []
+        for s in self.states:
+            A.append(s)
+        psi = np.transpose(A)
+        # print(psi)
+        recip_psi = np.matmul(psi, np.linalg.inv(np.matmul(np.matrix.getH(psi), psi)))
+        # Round nearzero value
+        recip_psi = recip_psi.round(15)
+        # print(recip_psi)
+        recip_psi = recip_psi.T
+        # q1 = np.outer(recip_psi[0], recip_psi[0])
+        # print(q1)
+
+        # Measurement operators
+        q = []
+        for i in range(n):
+            q.append(np.outer(recip_psi[i], recip_psi[i]).round(1))
+        q = np.array(q)
+
+        I = np.identity(self.num_amps)
+        p = cp.Variable(n)
+
+        objective = cp.Minimize(1 + cp.sum(prior_prob @ p))
+
+        constraints = []
+        assert min_prob >= 0
+        for i in range(n):
+            constraints.append(min_prob <= p[i])
+            constraints.append(p[i] <= 1)
+
+        expr = I
+        for i in range(n):
+            expr = expr - p[i] * q[i]
+        constraints.append(expr >> 0)  # Matrix inequality uses >>
+
+        prob = cp.Problem(objective, constraints)
+        result = prob.solve()
+        print("Result =", result.round(3))
+        # An acceptable optimal solution
+        sol = p.value.round(4)
+        print("Solution =", sol)
+        # Positive semidefinite
+        pi1 = I
+        for i in range(n):
+            pi1 = pi1 - sol[i] * q[i]
+
+        for i in range(n):
+            print(np.sqrt(sol[i]) * recip_psi[i])
+            print(np.linalg.norm(np.sqrt(sol[i]) * recip_psi[i]))
+        # print(pi1.round(5))
+        # Wrong answer if we over postprocess the solution
+        # sol_overround = p.value.round(2)
+        # print("Overprocessed solution =", sol_overround)
+        # pi1_overround = (
+        #     I
+        #     - sol_overround[0] * q[0]
+        #     - sol_overround[1] * q[1]
+        #     - sol_overround[2] * q[2]
+        # )  # Not positive semidefinite
+        # print(pi1_overround.round(5))
+
+        # The optimal Lagrange multiplier for a constraint
+        # is stored in constraint.dual_value.
+        # print(constraints[0].dual_value)
+        return
+
+    @staticmethod
+    def test_Eldar():
+        prob = NullSpaceSearchProblem(num_qubits=2, num_states=3)
+        prob.set_states()
+        prob.apply_Eldar()
+        return
+
 
 if __name__ == "__main__":
     NullSpaceSearchProblem.test()
