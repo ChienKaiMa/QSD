@@ -283,15 +283,35 @@ class NullSpaceSearchProblem:
         final_ops = self.calc_final_ops()
         almost = 0
         success = 0
+        for op in final_ops:
+            for i in range(self.num_states):
+                vd = np.round(np.vdot(self.states[i].data, op), 4)
+                print("vdot:", vd)
+                # d = np.round(np.dot(self.states[i].data, op), 4)
+                # print("dot:", d)
+        
         for o1, o2 in combinations(final_ops, 2):
-            vdot = np.round(np.vdot(o1, o2), 4)
-            if 0.3 < np.abs(vdot) <= 0.5:
+            vd = np.round(np.vdot(o1, o2), 4)
+            if 0.3 < np.abs(vd) <= 0.5:
                 almost += 1
-            elif np.abs(vdot) <= 0.3:
+            elif np.abs(vd) <= 0.3:
                 success += 1
-            print("vdot:", vdot)
+            print("vdot:", vd)
+
+        # Check objective function
+        a = 0
         for i in range(self.num_ops):
-            print("unit:", round(self.op_con(i, self.x), 4))
+            # vdot or matmul?
+            # a += (np.abs(np.vdot(self.states[i].data, final_ops[i])) ** 2)
+            print(self.states[i].data)
+            a += np.linalg.norm(np.vdot(final_ops[i], self.states[i].data)) ** 2
+        for i in range(self.num_ops):
+            print(final_ops[i])
+        print("a =", a)
+
+        for i in range(self.num_ops):
+            print("unit:", np.linalg.norm(final_ops[i]))
+            # print("unit:", round(self.op_con(i, self.x), 4))
         num_pairs = int(self.num_ops * (self.num_ops - 1) / 2)
         if success == num_pairs:
             print("Success (all <= 0.3)")
