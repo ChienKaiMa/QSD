@@ -143,8 +143,8 @@ class NullSpaceSearchProblem:
             s += x[idx] ** 2 + x[idx + 1] ** 2
         return s
 
-    def con(self, i, x):
-        return x[2 * i] ** 2 + x[2 * i + 1] ** 2
+    # def con(self, i, x):
+    #     return x[2 * i] ** 2 + x[2 * i + 1] ** 2
 
     def build_cons(self):
         self.constraints = []
@@ -162,8 +162,8 @@ class NullSpaceSearchProblem:
             # constraints.append(NonlinearConstraint(partial(op_con, i), 0.85, 1))
 
         # TODO this one is not actually required?
-        for i in range(self.num_vars // 2):
-            self.constraints.append(NonlinearConstraint(partial(self.con, i), 0, 1))
+        # for i in range(self.num_vars // 2):
+        #     self.constraints.append(NonlinearConstraint(partial(self.con, i), 0, 1))
 
         # self.constraints = constraints.copy()
         return
