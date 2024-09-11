@@ -47,7 +47,7 @@ class NullSpaceSearchProblem:
         if len(seeds):
             # Setting seeds from the arguments
             # TODO Check duplicates in seeds
-            if len(seeds) == num_qubits:
+            if len(seeds) == num_states:
                 states = [
                     random_statevector(2**num_qubits, seed=seeds[_])
                     for _ in range(num_states)
