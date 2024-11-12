@@ -72,7 +72,7 @@ def apply_Eldar(problem_spec: ProblemSpec, prior_prob=None, min_prob=0):
             logger.warning(f"sol[{i}] is zero or negative ({sol[i]} <= 1e-4), skip its operator")
             continue
         else:
-            povm.append(np.sqrt(sol[i]) * Phi_tilde[i])
+            povm.append(np.sqrt(sol[i]) * Phi_tilde[i].conj())
 
     # TODO Remember the remaining operators
     return povm

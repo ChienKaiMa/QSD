@@ -102,13 +102,13 @@ class POVMCircuit:
             unitary_gate = qclib.isometry._extend_to_unitary(
                 isometry, log_lines, log_cols
             )
-            qc_iso = qclib.isometry.decompose(unitary_gate, scheme=scheme).inverse()
+            qc_iso = qclib.isometry.decompose(unitary_gate, scheme=scheme)
             from qiskit.circuit.library import UnitaryGate
 
             # TODO unitary_gate
             # UnitaryGate(data=unitary_gate)
         else:
-            qc_iso = qclib.isometry.decompose(isometry, scheme=scheme).inverse()
+            qc_iso = qclib.isometry.decompose(isometry, scheme=scheme)
 
         # Trying approximate compiling
         self.approx(logger, qc_iso)
