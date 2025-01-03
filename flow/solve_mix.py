@@ -1,0 +1,673 @@
+from problem_spec import *
+import numpy as np
+import cvxpy as cp
+from scipy.linalg import null_space
+
+
+# import cplex
+# TODO a better function name
+def calc_prob(povm, state):
+    """
+    povm: List of measurement operators
+    state: Density matrix
+
+    Tr(rho * M) for each M in povm
+    Note that it does not yet consider prior probabilities.
+    """
+    return [
+        np.trace(
+            np.matmul(
+                state,
+                np.multiply(m[None].T.conj(), m),
+            )
+        )
+        .item()
+        .real
+        for m in povm
+    ]
+
+
+# def verify_povm(povm):
+#     # TODO Check mat is identity
+#     mat = np.zeros((self.num_amps, self.num_amps), dtype="complex128")
+#     for m in povm:
+#         print(np.linalg.norm(m))
+#         mat += np.multiply(m[None].T.conj(), m)
+#     print(np.linalg.norm(mat - np.eye(self.num_amps, dtype="complex128")))
+#     return
+
+# self.verify_povm(povm)
+
+
+def apply_Eldar_mix(self, prior_prob=None, p_I=0, min_prob=0):
+    """Apply the method in Eldar's paper in 2004. SIM
+    p_I: The predefined portion of inconclusive results. [0, 1)
+    """
+    np.set_printoptions(precision=4)
+    n = self.num_states
+    if prior_prob is None:
+        prior_prob = np.ones(n) * (1 / n)
+
+    # Measurement operators
+    ## q = []
+    ## for i in range(n):
+    ##     q.append(np.outer(recip_psi[i], recip_psi[i]).round(1))
+    ## q = np.array(q)
+
+    I = np.identity(self.num_amps)
+    X = cp.Variable(shape=(self.num_amps, self.num_amps), hermitian=True)
+    delta_scalar = cp.Variable(1, name="d")
+    beta = p_I  # Follow the naming in the paper
+
+    objective = cp.Minimize(cp.trace(X) - delta_scalar * beta)
+
+    # TODO [Priority: Low] add assertions
+    Delta = np.sum([np.multiply(prior_prob[i], self.states[i].data) for i in range(n)])
+
+    # Matrix inequality uses >>
+    constraints = []
+    for i in range(n):
+        constraints.append(X - np.multiply(prior_prob[i], self.states[i].data) >> 0)
+    constraints.append(X - cp.multiply(delta_scalar, Delta) >> 0)
+    constraints.append(X >> 0)
+    # TODO Add different constraint configurations
+    # epsilon-oriented
+
+    prob = cp.Problem(objective, constraints)
+    # Solver options: The precision has to be 1e-16 ~ 1e-20 to be enough for SCS...
+    ## result = prob.solve(solver=cp.CLARABEL)\
+    ## No options for precision, and it couldn't find null vector
+    ## result = prob.solve(solver=cp.CVXOPT, feastol=1e-10)
+    ## CVXOPT failed when feastol is small (Not sure root cause)
+    ## result = prob.solve(solver=cp.SCS, eps=1e-15)
+    ## "eps > 1e-16" couldn't find null vector for operator
+    result = prob.solve(solver=cp.SCS, eps=1e-10)
+    print("Result =", result)
+    print(f"CVXPY returns {prob.status}")
+    logger.info(f"CVXPY returns {prob.status}")
+
+    # Please don't round X_sol
+    X_sol = X.value
+    delta_sol = delta_scalar.value
+    print("Solution for X =")
+    print(X_sol)
+    print("Solution for delta =", delta_sol)
+
+    # Find measurement operator
+    povm = []
+    for i in range(n):
+        op = X_sol - np.multiply(prior_prob[i], self.states[i].data)
+        # The precision here (rcond) also matters
+        ## if the answer is not found, check the matrix and try a larger rcond
+        ns = null_space(op, rcond=1e-7)
+        # print(op)
+        # TODO reshape ns
+        # print(ns)
+        # TODO
+        povm.append(ns[:, 0])
+        # res = np.all(np.linalg.eigvals(op) >= 0)
+        # print(np.linalg.eigvals(op))
+        # print(res)
+    # The inconclusive measurement operator
+    if beta == 0:
+        print("Info: The inconclusive measurement is disabled.")
+    # else:
+    #     self.num_ops += 1
+    #     op = X_sol - np.multiply(delta_sol, Delta)
+    #     # The precision here (rcond) also matters
+    #     ## if the answer is not found, check the matrix and try a larger rcond
+    #     ns = null_space(op, rcond=1e-10)
+    #     print(ns)
+    #     povm.append(ns[:, 0])
+
+    # 2024/10/30 Obtain PVM
+    # The error measurement operator
+
+    last_op = np.eye(self.num_amps, dtype="complex128")
+    for m in povm:
+        # Add "None" to transpose
+        # https://stackoverflow.com/a/11885718/13518808
+        op = np.multiply(m[None].T.conj(), m)
+        last_op -= op
+        # print(m)
+    u, s, v = np.linalg.svd(last_op, hermitian=True)
+    last_povm = u[:, 0] * np.sqrt(s[0])
+    # print(last_povm)
+    povm.append(last_povm.conj())
+
+    # TODO
+    # Verify solution
+    # Positive semidefinite
+    # Calculate all probabilities
+    print("POVMs:")
+    for m in povm:
+        print(m)
+
+    print("Probabilities for each state:")
+    total = 0
+    p_d = 0
+    for i in range(n):
+        probs = calc_prob(povm, self.states[i].data)
+        print(probs)
+        total += prior_prob[i] * sum(probs)
+        p_d += prior_prob[i] * probs[i]
+    print("Total probability =", total)
+    print("Success probability =", p_d)
+    print()
+
+    # The optimal Lagrange multiplier for a constraint
+    # is stored in constraint.dual_value.
+    # print(constraints[0].dual_value)
+    return povm
+
+    isometry = self.naimark(povm)
+    print(isometry)
+    ## Isometry with Qiskit
+    ## iso = Isometry(
+    ##     isometry,
+    ##     num_ancillas_zero=0,
+    ##     num_ancillas_dirty=0,
+    ## )
+    ## qc_iso = QuantumCircuit(3)
+    ## qc_iso.append(iso, [0, 1, 2])
+
+    # 2024/10/30
+    # csd works, while ccd doesn't
+    qc_iso = decompose(isometry, scheme="csd").inverse()
+    # qc_iso = decompose(isometry, scheme="ccd").inverse()
+
+    service = qiskit_ibm_runtime.QiskitRuntimeService(
+        channel="ibm_quantum",
+        # instance="ibm-q/open/main",
+        instance="ibm-q-hub-ntu/ntu-internal/default",
+        token="e421d41292d0977e88ca2900d333e6b6789377af70e1923ba067e97afb929b2da3cd64bba701d1519067002f9c1fabe1e55c47a5539b12d8ec55b85864f6092d",
+    )
+
+    # Transpile first without the backend to avoid strange errors
+    # qclib -> qiskit
+    qc_iso = transpile(qc_iso)
+    print(qc_iso.decompose(reps=2).count_ops())
+    print("Depth,", qc_iso.decompose(reps=2).depth())
+
+    # Transpile with the backend
+    ibm_backend = service.backend("ibm_brisbane")
+    qc_iso = transpile(qc_iso, backend=ibm_backend)
+    print(qc_iso.count_ops())
+    print("Depth,", qc_iso.depth())
+
+    qiskit.qasm2.dump(
+        qc_iso,
+        f"qc_iso_q{self.num_qubits}_n{self.num_states}_noseed.qasm",
+    )
+    # t1_end = time.process_time()
+
+    return
+
+
+def apply_dawei_mix_primal(problem_spec: ProblemSpec, prior_prob=None, gamma=None):
+    """Apply Da-wei's formulation.
+    gamma: Threshold probabilities. List of [0, 1)
+    """
+    logger = logging.getLogger(__name__)
+    np.set_printoptions(precision=4)
+    n = problem_spec.num_states
+
+    if prior_prob is None:
+        prior_prob = np.ones(n) * (1 / n)
+    logger.info(f"The prior probabilities is set to uniform (n = {n})")
+
+    if gamma is None:
+        gamma = [0.2] * n
+    logger.info(f"The threshold probabilities are set to {gamma}")
+
+    # TODO
+    PI_list = []
+    for i in range(n+1):
+        PI = cp.Variable(
+            shape=(problem_spec.num_amps, problem_spec.num_amps),
+            hermitian=True,
+            name=f"PI_{i}",
+        )
+        PI_list.append(PI)
+
+    objective = cp.Maximize(
+        cp.sum(
+            [
+                prior_prob[i]
+                * cp.real(cp.trace(cp.matmul(problem_spec.states[i].data, PI_list[i])))
+                for i in range(n)
+            ]
+        )
+    )
+
+    # TODO constraints
+    I = np.identity(problem_spec.num_amps)
+    constraints = []
+    for i in range(n+1):
+        constraints.append(PI_list[i] >> 0)
+    for i in range(n):
+        # TODO Correct index for error
+        constraints.append(
+            cp.real(
+                cp.sum(
+                    [
+                        prior_prob[i]
+                        * cp.trace(cp.matmul(problem_spec.states[i].data, PI_list[j]))
+                        for j in range(n)
+                        if i != j
+                    ]
+                )
+            )
+            <= gamma[i]
+        )
+    constraints.append(cp.sum(PI_list) == I)
+
+    prob = cp.Problem(objective, constraints)
+    result = prob.solve(solver=cp.SCS, eps=1e-10)
+    print("Result =", result)
+    print(f"CVXPY returns {prob.status}")
+    logger.info(f"CVXPY returns {prob.status}")
+    if prob.status != "optimal":
+        logger.error(f"CVXPY returns {prob.status}")
+        return
+
+    povm = []
+    for i in range(n+1):
+        print(f"Solution for PI_{i} =")
+        print(PI_list[i].value)
+        u, s, v = np.linalg.svd(PI_list[i].value, hermitian=True)
+        last_povm = u[:, 0] * np.sqrt(s[0])
+        povm.append(last_povm.conj())
+
+    # TODO
+    # Calculate the measurement operators
+    last_op = np.eye(problem_spec.num_amps, dtype="complex128")
+    for m in povm:
+        # Add "None" to transpose
+        # https://stackoverflow.com/a/11885718/13518808
+        op = np.multiply(m[None].T.conj(), m)
+        last_op -= op
+        # print(m)
+    u, s, v = np.linalg.svd(last_op, hermitian=True)
+    last_povm = u[:, 0] * np.sqrt(s[0])
+    # print(last_povm)
+    povm.append(last_povm.conj())
+
+    # TODO
+    # Verify solution
+    print("Probabilities for each state:")
+    total = 0
+    p_d = 0
+    for i in range(n):
+        probs = calc_prob(povm, problem_spec.states[i].data)
+        print(probs)
+        total += prior_prob[i] * sum(probs)
+        p_d += prior_prob[i] * probs[i]
+    print("Total probability =", total)
+    print("Success probability =", p_d)
+    print()
+
+    # TODO
+    # Return POVM
+    return
+
+
+def apply_dawei_mix(problem_spec: ProblemSpec, prior_prob=None, gamma=None, min_prob=0):
+    """Apply Da-wei's formulation.
+    gamma: Threshold probabilities. List of [0, 1)
+    """
+    logger = logging.getLogger(__name__)
+    # TODO Everything! What is expected?
+    np.set_printoptions(precision=4)
+    n = problem_spec.num_states
+    if prior_prob is None:
+        prior_prob = np.ones(n) * (1 / n)
+    logger.info(f"The prior probabilities is set to uniform (n = {n})")
+
+    if gamma is None:
+        gamma = [0.2] * n
+    logger.info(f"The threshold probabilities are set to {gamma}")
+
+    I = np.identity(problem_spec.num_amps)
+    X = cp.Variable(
+        shape=(problem_spec.num_amps, problem_spec.num_amps), hermitian=True
+    )
+    delta_arr = cp.Variable(n, name="d")
+
+    objective = cp.Minimize(cp.trace(X) - cp.sum(cp.multiply(delta_arr, gamma)))
+
+    # TODO [Priority: Low] add assertions
+    Delta = np.sum(
+        [np.multiply(prior_prob[i], problem_spec.states[i].data) for i in range(n)]
+    )
+
+    # Matrix inequality uses >>
+    constraints = []
+    for i in range(n):
+        constraints.append(
+            X
+            - np.multiply(prior_prob[i], problem_spec.states[i].data)
+            - cp.sum(
+                [
+                    cp.multiply(
+                        delta_arr[j] * prior_prob[j], problem_spec.states[j].data
+                    )
+                    for j in range(n)
+                    if i != j
+                ]
+            )
+            >> 0
+        )
+
+    constraints.append(X >> 0)
+    # TODO Add different constraint configurations
+    # epsilon-oriented
+
+    prob = cp.Problem(objective, constraints)
+    # Solver options: The precision has to be 1e-16 ~ 1e-20 to be enough for SCS...
+    ## result = prob.solve(solver=cp.CLARABEL)\
+    ## No options for precision, and it couldn't find null vector
+    ## result = prob.solve(solver=cp.CVXOPT, feastol=1e-10)
+    ## CVXOPT failed when feastol is small (Not sure root cause)
+    ## result = prob.solve(solver=cp.SCS, eps=1e-15)
+    ## "eps > 1e-16" couldn't find null vector for operator
+    result = prob.solve(solver=cp.SCS, eps=1e-10)
+    print("Result =", result)
+    print(f"CVXPY returns {prob.status}")
+    logger.info(f"CVXPY returns {prob.status}")
+    if prob.status != "optimal":
+        logger.error(f"CVXPY returns {prob.status}")
+        return
+
+    # Please don't round X_sol
+    X_sol = X.value
+    delta_sol = delta_arr.value
+    print("Solution for X =")
+    print(X_sol)
+    print("Solution for delta =", delta_sol)
+
+    # Find measurement operator
+    povm = []
+    for i in range(n):
+        op = X_sol - np.multiply(prior_prob[i], problem_spec.states[i].data)
+        # print(op)
+        # The precision here (rcond) also matters
+        ## if the answer is not found, check the matrix and try a larger rcond
+        ns = null_space(op, rcond=1e-7)
+        # print(op)
+        # TODO reshape ns
+        # print(ns)
+        # TODO
+        povm.append(ns[:, 0])
+        # res = np.all(np.linalg.eigvals(op) >= 0)
+        # print(np.linalg.eigvals(op))
+        # print(res)
+    # The inconclusive measurement operator
+    ## if beta == 0:
+    ##     print("Info: The inconclusive measurement is disabled.")
+    # else:
+    #     self.num_ops += 1
+    #     op = X_sol - np.multiply(delta_sol, Delta)
+    #     # The precision here (rcond) also matters
+    #     ## if the answer is not found, check the matrix and try a larger rcond
+    #     ns = null_space(op, rcond=1e-10)
+    #     print(ns)
+    #     povm.append(ns[:, 0])
+
+    # 2024/10/30 Obtain PVM
+    # The error measurement operator
+    # if beta == 0:
+    last_op = np.eye(problem_spec.num_amps, dtype="complex128")
+    for m in povm:
+        # Add "None" to transpose
+        # https://stackoverflow.com/a/11885718/13518808
+        op = np.multiply(m[None].T.conj(), m)
+        last_op -= op
+        # print(m)
+    u, s, v = np.linalg.svd(last_op, hermitian=True)
+    last_povm = u[:, 0] * np.sqrt(s[0])
+    # print(last_povm)
+    povm.append(last_povm.conj())
+
+    # TODO
+    # Verify solution
+    # Positive semidefinite
+
+    ## for i in range(n):
+    ##     print(np.sqrt(sol[i]) * recip_psi[i])
+    ##     print(np.linalg.norm(np.sqrt(sol[i]) * recip_psi[i]))
+    # print(pi1.round(5))
+    # Wrong answer if we over postprocess the solution
+    # sol_overround = p.value.round(2)
+    # print("Overprocessed solution =", sol_overround)
+    # pi1_overround = (
+    #     I
+    #     - sol_overround[0] * q[0]
+    #     - sol_overround[1] * q[1]
+    #     - sol_overround[2] * q[2]
+    # )  # Not positive semidefinite
+    # print(pi1_overround.round(5))
+
+    # The optimal Lagrange multiplier for a constraint
+    # is stored in constraint.dual_value.
+    # print(constraints[0].dual_value)
+    print("Probabilities for each state:")
+    total = 0
+    p_d = 0
+    for i in range(n):
+        probs = calc_prob(povm, problem_spec.states[i].data)
+        print(probs)
+        total += prior_prob[i] * sum(probs)
+        p_d += prior_prob[i] * probs[i]
+    print("Total probability =", total)
+    print("Success probability =", p_d)
+    print()
+    return povm
+    isometry = self.naimark(povm)
+    print(isometry)
+    ## Isometry with Qiskit
+    ## iso = Isometry(
+    ##     isometry,
+    ##     num_ancillas_zero=0,
+    ##     num_ancillas_dirty=0,
+    ## )
+    ## qc_iso = QuantumCircuit(3)
+    ## qc_iso.append(iso, [0, 1, 2])
+
+    # 2024/10/30
+    # csd works, while ccd doesn't
+    qc_iso = decompose(isometry, scheme="csd").inverse()
+    # qc_iso = decompose(isometry, scheme="ccd").inverse()
+
+    service = qiskit_ibm_runtime.QiskitRuntimeService(
+        channel="ibm_quantum",
+        # instance="ibm-q/open/main",
+        instance="ibm-q-hub-ntu/ntu-internal/default",
+        token="e421d41292d0977e88ca2900d333e6b6789377af70e1923ba067e97afb929b2da3cd64bba701d1519067002f9c1fabe1e55c47a5539b12d8ec55b85864f6092d",
+    )
+
+    # Transpile first without the backend to avoid strange errors
+    # qclib -> qiskit
+    qc_iso = transpile(qc_iso)
+    print(qc_iso.decompose(reps=2).count_ops())
+    print("Depth,", qc_iso.decompose(reps=2).depth())
+
+    # Transpile with the backend
+    ibm_backend = service.backend("ibm_brisbane")
+    qc_iso = transpile(qc_iso, backend=ibm_backend)
+    print(qc_iso.count_ops())
+    print("Depth,", qc_iso.depth())
+
+    qiskit.qasm2.dump(
+        qc_iso,
+        f"qc_iso_q{self.num_qubits}_n{self.num_states}_noseed.qasm",
+    )
+    # t1_end = time.process_time()
+
+    return
+
+
+def apply_Eldar(problem_spec: ProblemSpec, prior_prob=None, min_prob=0):
+    """Apply the method in Eldar's paper in 2003."""
+    assert problem_spec.state_type == "statevector"
+    logger = logging.getLogger(__name__)
+
+    np_prec = 4
+    np.set_printoptions(precision=np_prec)
+    logger.info(f"Numpy print precision is set to {np_prec}")
+
+    # Default to uniform distribution
+    n = problem_spec.num_states
+    if prior_prob is None:
+        prior_prob = np.ones(n) * (-1 / n)
+        logger.info(f"The prior probabilities is set to uniform (n = {n})")
+
+    # Equation (6): Reciprocal states
+    Phi_tilde = get_Phi_tilde(problem_spec)
+    np.save(f"Phi_tilde_{problem_spec.case_id}.npy", Phi_tilde)
+    logger.info(f"The matrix is saved to Phi_tilde_{problem_spec.case_id}.npy")
+
+    # Equation (4)
+    # Measurement operators without its measured probability
+    # q is the array of Q_i
+    q = []
+    for i in range(n):
+        q.append(np.multiply(Phi_tilde[i][None].T.conj(), Phi_tilde[i]))
+    q = np.array(q)
+
+    # Equation (20) ~ (24): Semidefinite programming (SDP) formulation
+    p = cp.Variable(n)
+    objective = cp.Minimize(1 + cp.sum(prior_prob @ p))
+
+    constraints = []
+    # TODO min_prob is a list of different numbers
+    assert min_prob >= 0
+    for i in range(n):
+        constraints.append(min_prob <= p[i])
+        constraints.append(p[i] <= 1)
+    I = np.eye(problem_spec.num_amps, dtype="complex128")
+    # I = np.identity(problem_spec.num_amps)
+    expr = I
+    for i in range(n):
+        expr = expr - p[i] * q[i]
+    constraints.append(expr >> 0)  # Matrix inequality in CVXPY uses >>
+
+    prob = cp.Problem(objective, constraints)
+    # TODO logger.info(f"CVXPY settings {}")
+    t1 = time.time()
+    # result = prob.solve(solver=cp.SCS, eps=1e-20)
+    result = prob.solve(solver=cp.SCS, verbose=False)  # , eps=1e-20)
+    # result = prob.solve(solver=cp.CPLEX, verbose=True, eps=1e-20)
+    t2 = time.time()
+    logger.info(f"CVXPY returns {prob.status}")
+    # if prob.status == 'optimal':
+    #     pass
+    # else:
+    #     pass
+    logger.info(f"Solution time (rounded) = {round((t2 - t1), 4)} seconds")
+    logger.info(f"Result (rounded) = {result.round(4)}")
+    sol = p.value
+    logger.info(f"Solution (rounded) = {sol.round(4)}")
+
+    # Obtain POVMs
+    povm = []
+    for i in range(n):
+        if sol[i] <= 1e-4:
+            logger.warning(
+                f"sol[{i}] is zero or negative ({sol[i]} <= 1e-4), skip its operator"
+            )
+            continue
+        else:
+            povm.append(np.sqrt(sol[i]) * Phi_tilde[i].conj())
+
+    # TODO Remember the remaining operators
+    return povm
+
+
+def get_Phi_tilde(problem_spec: ProblemSpec):
+    logger = logging.getLogger(__name__)
+    tmp_arr = []
+    for s in problem_spec.states:
+        tmp_arr.append(s)
+    Phi = np.transpose(tmp_arr)
+    # TODO use vstacks instead and check if its correct
+    # Phi_1 = np.vstack(problem_spec.states)
+    # assert Phi == Phi_1
+    np.save(f"Phi_{problem_spec.case_id}.npy", Phi)
+    logger.info(f"The matrix is saved to Phi_{problem_spec.case_id}.npy")
+    Phi_tilde = np.matmul(Phi, np.linalg.inv(np.matmul(Phi.conj().T, Phi)))
+    Phi_tilde = Phi_tilde.round(15)  # Remove nearzero value
+    Phi_tilde = Phi_tilde.T
+    return Phi_tilde
+
+
+if __name__ == "__main__":
+    # TODO
+    # Simple tests or solver comparison?
+    parser = ArgumentParser()
+    parser.add_argument("-q", "--nqubits", default=2)
+    parser.add_argument("-n", "--nstates", default=3)
+    parser.add_argument("-s", "--seed", default=42)
+    args = parser.parse_args()
+    nq = int(args.nqubits)
+    ns = int(args.nstates)
+    seed = int(args.seed)
+    noise_level = 0.3
+    case_id = f"q{nq}_n{ns}_s{seed}_mix_{noise_level}"
+    logging.basicConfig(
+        filename=f"solvers_{case_id}.log",
+        filemode="a",
+        format="{asctime} {levelname} {filename}:{lineno}: {message}",
+        datefmt="%Y-%m-%d %H:%M:%S",
+        style="{",
+        level=logging.DEBUG,
+        encoding="utf-8",
+    )
+    logger = logging.getLogger(__name__)
+    logger.info(f"Start a new program")
+    logger.info(f"nq = {nq}, ns = {ns}, seed = {seed}")
+    tracemalloc.start()
+    problem = ProblemSpec(
+        num_qubits=nq, num_states=ns, case_id=case_id, state_type="densitymatrix"
+    )
+
+    states, disturbance_states, combined_states = ProblemSpec.gen_noisy_states(
+        num_qubits=nq,
+        num_states=ns,
+        seeds=get_random_seeds(ns, seed=seed),
+        noise_level=noise_level,
+        noise_rank=2,
+    )
+
+    # Ideal, but use the new formulation
+    problem.set_states(state_type="densitymatrix", states=states)
+    povm = apply_Eldar_mix(self=problem)
+    povm = apply_Eldar_mix(self=problem, p_I=0.3)
+    # TODO Save POVM
+
+    # Noisy
+    problem.set_states(state_type="densitymatrix", states=combined_states)
+    print(0.2)
+    povm = apply_dawei_mix_primal(problem_spec=problem, gamma=[0.2, 0.2, 0.2])
+
+    print(0.1)
+    povm = apply_dawei_mix_primal(problem_spec=problem, gamma=[0.1, 0.1, 0.1])
+
+    
+    print(0.05)
+    povm = apply_dawei_mix_primal(problem_spec=problem, gamma=[0.05, 0.05, 0.05])
+
+    print(0.04)
+    povm = apply_dawei_mix_primal(problem_spec=problem, gamma=[0.04, 0.04, 0.04])
+
+    for i in range(11):
+        a = 0.05 - i * 0.001
+        print(a)
+        povm = apply_dawei_mix_primal(problem_spec=problem, gamma=[a] * 3)
+        print()
+
+    logger.info(f"Memory (current, peak, in bytes) = {tracemalloc.get_traced_memory()}")
+    tracemalloc.stop()
+    np.save(f"povm_{case_id}.npy", povm)
+    logger.info(f"The POVM is saved to povm_{case_id}.npy")
+    # TODO Remember the remaining operators
