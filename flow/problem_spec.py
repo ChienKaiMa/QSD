@@ -90,21 +90,21 @@ class ProblemSpec:
         )
         return states
 
-    def set_states(self, state_type, states=None):
+    def set_states(self, state_type, states=None, overwrite=False):
         logger = logging.getLogger(__name__)
-        if self.states != []:
-            logger.warning(
-                "The states are already set. This method call will do nothing."
-            )
-            return
-        elif states is None:
+        if states is None:
             logger.info("No states are provided. The states will be generated.")
             self.states = self.gen_states(
                 num_qubits=self.num_qubits,
                 num_states=self.num_states,
                 state_type=self.state_type,
             )
-        else:
+        elif self.states != [] and not overwrite:
+            logger.warning(
+                "The states are already set. This method call will do nothing."
+            )
+            return
+        elif overwrite:
             # TODO assert type correspond to data
             self.states = states.copy()
             self.state_type = state_type
