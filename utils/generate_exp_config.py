@@ -32,34 +32,34 @@ def dump_linspace_params_to_json(
 def generate_small_config():
     """
     Generate config files for noise, fptol, and fntol.
-    The test size is 5."""
+    The test size is 6."""
     dump_linspace_params_to_json(
-        0, 0.1, num=5, endpoint=True, dtype="float64", filename="noise_small.json"
+        0, 0.1, num=6, endpoint=True, dtype="float64", filename="configs/noise_small.json"
     )
 
     dump_linspace_params_to_json(
-        0, 0.3, num=5, endpoint=True, dtype="float64", filename="fptol_small.json"
+        0, 0.3, num=6, endpoint=True, dtype="float64", filename="configs/fptol_small.json"
     )
 
     dump_linspace_params_to_json(
-        0, 0.3, num=5, endpoint=True, dtype="float64", filename="fntol_small.json"
+        0, 0.3, num=6, endpoint=True, dtype="float64", filename="configs/fntol_small.json"
     )
 
 
 def generate_large_config():
     """
     Generate config files for noise, fptol, and fntol.
-    The test size is 40."""
+    The test size is 41."""
     dump_linspace_params_to_json(
-        0, 0.1, num=40, endpoint=True, dtype="float64", filename="noise_large.json"
+        0, 0.1, num=41, endpoint=True, dtype="float64", filename="configs/noise_large.json"
     )
 
     dump_linspace_params_to_json(
-        0, 0.3, num=40, endpoint=True, dtype="float64", filename="fptol_large.json"
+        0, 0.3, num=41, endpoint=True, dtype="float64", filename="configs/fptol_large.json"
     )
 
     dump_linspace_params_to_json(
-        0, 0.3, num=40, endpoint=True, dtype="float64", filename="fntol_large.json"
+        0, 0.3, num=41, endpoint=True, dtype="float64", filename="configs/fntol_large.json"
     )
     
 
