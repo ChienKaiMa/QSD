@@ -1,12 +1,10 @@
 import sys
-import time
-import tracemalloc
 import logging
 from argparse import *
+import numpy as np
 
 sys.path.append("../")
 sys.path.append("./")
-from temp.get_random_seeds import *
 from qiskit.quantum_info import (
     random_statevector,
     random_density_matrix,
