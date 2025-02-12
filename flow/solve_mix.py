@@ -1,45 +1,17 @@
+import logging.config
+from interface import *
 from problem_spec import *
+from flow.plots import compute_event_probabilities, save_prob_heatmap
+from flow.verify_povm import *
 import numpy as np
 import cvxpy as cp
 from scipy.linalg import null_space
+from temp.get_random_seeds import get_random_seeds
+import time
+import tracemalloc
 
 
-# import cplex
-# TODO a better function name
-def calc_prob(povm, state):
-    """
-    povm: List of measurement operators
-    state: Density matrix
-
-    Tr(rho * M) for each M in povm
-    Note that it does not yet consider prior probabilities.
-    """
-    return [
-        np.trace(
-            np.matmul(
-                state,
-                np.multiply(m[None].T.conj(), m),
-            )
-        )
-        .item()
-        .real
-        for m in povm
-    ]
-
-
-# def verify_povm(povm):
-#     # TODO Check mat is identity
-#     mat = np.zeros((self.num_amps, self.num_amps), dtype="complex128")
-#     for m in povm:
-#         print(np.linalg.norm(m))
-#         mat += np.multiply(m[None].T.conj(), m)
-#     print(np.linalg.norm(mat - np.eye(self.num_amps, dtype="complex128")))
-#     return
-
-# self.verify_povm(povm)
-
-
-def apply_Eldar_mix(self, prior_prob=None, p_I=0, min_prob=0):
+def apply_Eldar_mix(self, prior_prob=None, p_I=0):
     """Apply the method in Eldar's paper in 2004. SIM
     p_I: The predefined portion of inconclusive results. [0, 1)
     """
@@ -147,8 +119,8 @@ def apply_Eldar_mix(self, prior_prob=None, p_I=0, min_prob=0):
     total = 0
     p_d = 0
     for i in range(n):
-        probs = calc_prob(povm, self.states[i].data)
-        print(probs)
+        probs = compute_event_probabilities(povm, self.states[i].data)
+        print(np.array(probs))
         total += prior_prob[i] * sum(probs)
         p_d += prior_prob[i] * probs[i]
     print("Total probability =", total)
@@ -204,9 +176,9 @@ def apply_Eldar_mix(self, prior_prob=None, p_I=0, min_prob=0):
     return
 
 
-def apply_dawei_mix_primal(problem_spec: ProblemSpec, prior_prob=None, gamma=None):
-    """Apply Da-wei's formulation.
-    gamma: Threshold probabilities. List of [0, 1)
+def apply_Eldar_mix_primal(problem_spec: ProblemSpec, prior_prob=None, beta=0):
+    """Apply Eldar's formulation.
+    The predefined portion of inconclusive results. [0, 1)
     """
     logger = logging.getLogger(__name__)
     np.set_printoptions(precision=4)
@@ -216,13 +188,11 @@ def apply_dawei_mix_primal(problem_spec: ProblemSpec, prior_prob=None, gamma=Non
         prior_prob = np.ones(n) * (1 / n)
     logger.info(f"The prior probabilities is set to uniform (n = {n})")
 
-    if gamma is None:
-        gamma = [0.2] * n
-    logger.info(f"The threshold probabilities are set to {gamma}")
+    logger.info(f"The inconclusive portion is set to {beta}")
 
     # TODO
     PI_list = []
-    for i in range(n+1):
+    for i in range(n + 1):
         PI = cp.Variable(
             shape=(problem_spec.num_amps, problem_spec.num_amps),
             hermitian=True,
@@ -243,7 +213,116 @@ def apply_dawei_mix_primal(problem_spec: ProblemSpec, prior_prob=None, gamma=Non
     # TODO constraints
     I = np.identity(problem_spec.num_amps)
     constraints = []
-    for i in range(n+1):
+    for i in range(n + 1):
+        constraints.append(PI_list[i] >> 0)
+
+    constraints.append(
+        cp.real(
+            cp.sum(
+                [
+                    prior_prob[j]
+                    * cp.trace(cp.matmul(problem_spec.states[j].data, PI_list[n]))
+                    for j in range(n)
+                ]
+            )
+        )
+        >= beta
+    )
+    constraints.append(cp.sum(PI_list) == I)
+
+    prob = cp.Problem(objective, constraints)
+    result = prob.solve(solver=cp.SCS, eps=1e-10, acceleration_lookback=10)
+    print("Result =", result)
+    print(f"CVXPY returns {prob.status}")
+    logger.info(f"CVXPY returns {prob.status}")
+    if prob.status != "optimal":
+        logger.error(f"CVXPY returns {prob.status}")
+        return
+
+    povm = []
+    for i in range(n + 1):
+        print(f"Solution for PI_{i} =")
+        print(PI_list[i].value)
+        u, s, v = np.linalg.svd(PI_list[i].value, hermitian=True)
+        last_povm = u[:, 0] * np.sqrt(s[0])
+        povm.append(last_povm.conj())
+
+    # TODO
+    # Calculate the measurement operators
+    ## last_op = np.eye(problem_spec.num_amps, dtype="complex128")
+    ## for m in povm:
+    ##     # Add "None" to transpose
+    ##     # https://stackoverflow.com/a/11885718/13518808
+    ##     op = np.multiply(m[None].T.conj(), m)
+    ##     last_op -= op
+    ##     # print(m)
+    ## u, s, v = np.linalg.svd(last_op, hermitian=True)
+    ## last_povm = u[:, 0] * np.sqrt(s[0])
+    ## # print(last_povm)
+    ## povm.append(last_povm.conj())
+
+    # TODO
+    # Verify solution
+    print("Probabilities for each state:")
+    total = 0
+    p_d = 0
+    inc_prob = 0
+    for i in range(n):
+        probs = compute_event_probabilities(povm, problem_spec.states[i].data)
+        print(probs)
+        total += prior_prob[i] * sum(probs)
+        p_d += prior_prob[i] * probs[i]
+        inc_prob += prior_prob[i] * probs[n]
+    print("Total probability =", total)
+    print("Success probability =", p_d)
+    print("Inconclusive probability =", inc_prob)
+    print()
+
+    # TODO
+    # Return POVM
+    return
+
+
+def apply_koova_mix_primal(problem_spec: ProblemSpec, prior_prob=None, gamma=None):
+    """Apply Koova's formulation.
+    gamma: Threshold probabilities. List of [0, 1)
+    """
+    logger = logging.getLogger(__name__)
+    np.set_printoptions(precision=4)
+    n = problem_spec.num_states
+
+    if prior_prob is None:
+        prior_prob = np.ones(n) * (1 / n)
+    logger.info(f"The prior probabilities is set to uniform (n = {n})")
+
+    if gamma is None:
+        gamma = [0.2] * n
+    logger.info(f"The threshold probabilities are set to {gamma}")
+
+    # TODO
+    PI_list = []
+    for i in range(n + 1):
+        PI = cp.Variable(
+            shape=(problem_spec.num_amps, problem_spec.num_amps),
+            hermitian=True,
+            name=f"PI_{i}",
+        )
+        PI_list.append(PI)
+
+    objective = cp.Maximize(
+        cp.sum(
+            [
+                prior_prob[i]
+                * cp.real(cp.trace(cp.matmul(problem_spec.states[i].data, PI_list[i])))
+                for i in range(n)
+            ]
+        )
+    )
+
+    # TODO constraints
+    I = np.identity(problem_spec.num_amps)
+    constraints = []
+    for i in range(n + 1):
         constraints.append(PI_list[i] >> 0)
     for i in range(n):
         # TODO Correct index for error
@@ -272,7 +351,7 @@ def apply_dawei_mix_primal(problem_spec: ProblemSpec, prior_prob=None, gamma=Non
         return
 
     povm = []
-    for i in range(n+1):
+    for i in range(n + 1):
         print(f"Solution for PI_{i} =")
         print(PI_list[i].value)
         u, s, v = np.linalg.svd(PI_list[i].value, hermitian=True)
@@ -281,38 +360,164 @@ def apply_dawei_mix_primal(problem_spec: ProblemSpec, prior_prob=None, gamma=Non
 
     # TODO
     # Calculate the measurement operators
-    last_op = np.eye(problem_spec.num_amps, dtype="complex128")
-    for m in povm:
-        # Add "None" to transpose
-        # https://stackoverflow.com/a/11885718/13518808
-        op = np.multiply(m[None].T.conj(), m)
-        last_op -= op
-        # print(m)
-    u, s, v = np.linalg.svd(last_op, hermitian=True)
-    last_povm = u[:, 0] * np.sqrt(s[0])
-    # print(last_povm)
-    povm.append(last_povm.conj())
+    ## last_op = np.eye(problem_spec.num_amps, dtype="complex128")
+    ## for m in povm:
+    ##     # Add "None" to transpose
+    ##     # https://stackoverflow.com/a/11885718/13518808
+    ##     op = np.multiply(m[None].T.conj(), m)
+    ##     last_op -= op
+    ##     # print(m)
+    ## u, s, v = np.linalg.svd(last_op, hermitian=True)
+    ## last_povm = u[:, 0] * np.sqrt(s[0])
+    ## # print(last_povm)
+    ## povm.append(last_povm.conj())
 
     # TODO
     # Verify solution
     print("Probabilities for each state:")
     total = 0
     p_d = 0
+    inc_prob = 0
     for i in range(n):
-        probs = calc_prob(povm, problem_spec.states[i].data)
+        probs = compute_event_probabilities(povm, problem_spec.states[i].data)
         print(probs)
         total += prior_prob[i] * sum(probs)
         p_d += prior_prob[i] * probs[i]
+        inc_prob += prior_prob[i] * probs[n]
     print("Total probability =", total)
     print("Success probability =", p_d)
+    print("Inconclusive probability =", inc_prob)
     print()
+    save_prob_heatmap(
+        prior_prob,
+        povm,
+        problem_spec.states,
+        tag=f"q{problem_spec.num_qubits}_n{n}_koova_{gamma[0]:2f}",
+    )
 
     # TODO
     # Return POVM
     return
 
 
-def apply_dawei_mix(problem_spec: ProblemSpec, prior_prob=None, gamma=None, min_prob=0):
+def apply_dawei_mix_primal(problem_spec: ProblemSpec, prior_prob=None, gamma=None):
+    """Apply Da-wei's formulation.
+    gamma: Threshold probabilities. List of [0, 1)
+    """
+    logger = logging.getLogger(__name__)
+    np.set_printoptions(precision=4)
+    n = problem_spec.num_states
+
+    if prior_prob is None:
+        prior_prob = np.ones(n) * (1 / n)
+    logger.info(f"The prior probabilities is set to uniform (n = {n})")
+
+    if gamma is None or len(gamma) != n:
+        gamma = [0.2] * n
+    logger.info(f"The threshold probabilities are set to {gamma}")
+
+    # TODO
+    PI_list = []
+    for i in range(n + 1):
+        PI = cp.Variable(
+            shape=(problem_spec.num_amps, problem_spec.num_amps),
+            hermitian=True,
+            name=f"PI_{i}",
+        )
+        PI_list.append(PI)
+
+    objective = cp.Maximize(
+        cp.sum(
+            [
+                prior_prob[i]
+                * cp.real(cp.trace(cp.matmul(problem_spec.states[i].data, PI_list[i])))
+                for i in range(n)
+            ]
+        )
+    )
+
+    # TODO constraints
+    I = np.identity(problem_spec.num_amps)
+    constraints = []
+    for i in range(n + 1):
+        constraints.append(PI_list[i] >> 0)
+    for i in range(n):
+        # TODO Correct index for error
+        constraints.append(
+            cp.real(
+                prior_prob[i]
+                * cp.trace(cp.matmul(problem_spec.states[i].data, PI_list[i]))
+            )
+            >= cp.real(
+                cp.sum(
+                    [
+                        prior_prob[i]
+                        * cp.trace(cp.matmul(problem_spec.states[i].data, PI_list[j]))
+                        for j in range(n)
+                    ]
+                )
+            )
+            * (1 - gamma[i])
+        )
+    constraints.append(cp.sum(PI_list) == I)
+
+    prob = cp.Problem(objective, constraints)
+    result = prob.solve(solver=cp.SCS, eps=1e-10, acceleration_lookback=10)
+    print("Result =", result)
+    print(f"CVXPY returns {prob.status}")
+    logger.info(f"CVXPY returns {prob.status}")
+    if prob.status != "optimal":
+        logger.error(f"CVXPY returns {prob.status}")
+        return
+
+    povm = []
+    for i in range(n + 1):
+        print(f"Solution for PI_{i} =")
+        print(PI_list[i].value)
+        u, s, v = np.linalg.svd(PI_list[i].value, hermitian=True)
+        last_povm = u[:, 0] * np.sqrt(s[0])
+        povm.append(last_povm.conj())
+
+    # TODO
+    # Calculate the measurement operators
+    ## last_op = np.eye(problem_spec.num_amps, dtype="complex128")
+    ## for m in povm:
+    ##     # Add "None" to transpose
+    ##     # https://stackoverflow.com/a/11885718/13518808
+    ##     op = np.multiply(m[None].T.conj(), m)
+    ##     last_op -= op
+    ##     # print(m)
+    ## u, s, v = np.linalg.svd(last_op, hermitian=True)
+    ## last_povm = u[:, 0] * np.sqrt(s[0])
+    ## # print(last_povm)
+    ## povm.append(last_povm.conj())
+
+    # TODO
+    # Verify solution
+    print("Probabilities for each state:")
+    total = 0
+    p_d = 0
+    inc_prob = 0
+    for i in range(n):
+        probs = compute_event_probabilities(povm, problem_spec.states[i].data)
+        print(probs)
+        total += prior_prob[i] * sum(probs)
+        p_d += prior_prob[i] * probs[i]
+        inc_prob += prior_prob[i] * probs[n]
+    print("Total probability =", total)
+    print("Success probability =", p_d)
+    print("Inconclusive probability =", inc_prob)
+    print()
+    save_prob_heatmap(
+        prior_prob, povm, problem_spec.states, tag=f"{n}_dawei_{gamma[0]:2f}"
+    )
+
+    # TODO
+    # Return POVM
+    return
+
+
+def apply_dawei_mix(problem_spec: ProblemSpec, prior_prob=None, gamma=None):
     """Apply Da-wei's formulation.
     gamma: Threshold probabilities. List of [0, 1)
     """
@@ -455,7 +660,7 @@ def apply_dawei_mix(problem_spec: ProblemSpec, prior_prob=None, gamma=None, min_
     total = 0
     p_d = 0
     for i in range(n):
-        probs = calc_prob(povm, problem_spec.states[i].data)
+        probs = compute_event_probabilities(povm, problem_spec.states[i].data)
         print(probs)
         total += prior_prob[i] * sum(probs)
         p_d += prior_prob[i] * probs[i]
@@ -507,6 +712,200 @@ def apply_dawei_mix(problem_spec: ProblemSpec, prior_prob=None, gamma=None, min_
     return
 
 
+def apply_crossQD(
+    problem_spec: ProblemSpec, prior_prob=None, alpha=None, beta=None, noise_level=0
+):
+    """Apply the cross quantum discrimination method.
+    beta: Threshold probabilities. List of [0, 1)
+
+    """
+    assert problem_spec.state_type == "densitymatrix"
+    logger = logging.getLogger(__name__)
+    np.set_printoptions(precision=4)
+    n = problem_spec.num_states
+
+    if prior_prob is None:
+        prior_prob = np.ones(n) * (1 / n)
+        logger.info(f"The prior probabilities is set to uniform (n = {n})")
+    else:
+        logger.info(f"The prior probabilities is set to {prior_prob}")
+
+    if alpha is None or len(alpha) != n:
+        alpha = [0.01] * n
+    logger.info(f"The threshold probabilities (alpha) are set to {alpha}")
+
+    if beta is None or len(beta) != n:
+        beta = [0.01] * n
+    logger.info(f"The threshold probabilities (beta) are set to {beta}")
+
+    # TODO
+    PI_list = []
+    for i in range(n + 1):
+        PI = cp.Variable(
+            shape=(problem_spec.num_amps, problem_spec.num_amps),
+            hermitian=True,
+            name=f"PI_{i}",
+        )
+        PI_list.append(PI)
+
+    objective = cp.Maximize(
+        cp.sum(
+            [
+                prior_prob[i]
+                * cp.real(cp.trace(cp.matmul(problem_spec.states[i].data, PI_list[i])))
+                for i in range(n)
+            ]
+        )
+    )
+
+    # TODO constraints
+    I = np.identity(problem_spec.num_amps)
+    constraints = []
+    for i in range(n + 1):
+        constraints.append(PI_list[i] >> 0)
+
+    # Conditional probability with respect to the measurement operator
+    # prior_prob[i] is divided on both sides
+    for i in range(n):
+        constraints.append(
+            cp.real(cp.trace(cp.matmul(problem_spec.states[i].data, PI_list[i])))
+            >= cp.real(
+                cp.sum(
+                    [
+                        cp.trace(cp.matmul(problem_spec.states[i].data, PI_list[j]))
+                        for j in range(n)
+                    ]
+                )
+            )
+            * (1 - alpha[i])
+        )
+
+    # Conditional probability with respect to the input state
+    for i in range(n):
+        constraints.append(
+            cp.real(
+                prior_prob[i]
+                * cp.trace(cp.matmul(problem_spec.states[i].data, PI_list[i]))
+            )
+            >= cp.real(
+                cp.sum(
+                    [
+                        prior_prob[j]
+                        * cp.trace(cp.matmul(problem_spec.states[j].data, PI_list[i]))
+                        for j in range(n)
+                    ]
+                )
+            )
+            * (1 - beta[i])
+        )
+
+    constraints.append(cp.sum(PI_list) == I)
+
+    prob = cp.Problem(objective, constraints)
+    result = prob.solve(solver=cp.SCS, eps=1e-7, acceleration_lookback=10)
+    print("Result =", result)
+    print(f"CVXPY returns {prob.status}")
+    logger.info(f"CVXPY returns {prob.status}")
+    if prob.status != "optimal" and prob.status != "optimal_inaccurate":
+        logger.error(f"CVXPY returns {prob.status}")
+        return False
+
+    povm = []
+    # TODO
+    # Check the rank of the Hermitian operators
+    # Log the rank of the Hermitian operators
+    # Dictionary of measured bitstrings to the target states
+    bitstring_to_target_state = dict()
+
+    strings_used = 0
+    for i in range(n + 1):
+        print(f"Solution for PI_{i} =")
+        print(PI_list[i].value)
+        u, s, v = np.linalg.svd(PI_list[i].value, hermitian=True)
+        for j in range(len(s)):
+            # Don't add if s[j] too small
+            if s[j] > 1e-7:
+                last_povm = u[:, j] * np.sqrt(s[j])
+                bitstring_to_target_state[strings_used] = i
+                povm.append(last_povm.conj())
+                strings_used += 1
+
+    problem_spec.bitstring_to_target_state = bitstring_to_target_state.copy()
+    print("bitstring_to_target_state")
+    print(bitstring_to_target_state)
+    print("strings_used")
+    print(strings_used)
+    # TODO save strings_used somewhere
+    #
+
+    # TODO
+    # Calculate the measurement operators
+    ## last_op = np.eye(problem_spec.num_amps, dtype="complex128")
+    ## for m in povm:
+    ##     # Add "None" to transpose
+    ##     # https://stackoverflow.com/a/11885718/13518808
+    ##     op = np.multiply(m[None].T.conj(), m)
+    ##     last_op -= op
+    ##     # print(m)
+    ## u, s, v = np.linalg.svd(last_op, hermitian=True)
+    ## last_povm = u[:, 0] * np.sqrt(s[0])
+    ## # print(last_povm)
+    ## povm.append(last_povm.conj())
+
+    # TODO Uncomment these lines
+    ## if not verify_povm(povm):
+    ##     print("POVM check failed.")
+    ##     return False
+    ## else:
+    ##     print("POVM check passed.")
+
+    # TODO
+    # Verify solution
+    np.set_printoptions(precision=4)
+    print("Probabilities for each state:")
+    total = 0
+    p_d = 0
+    p_inc = 0
+    for i in range(n):
+        probs = compute_event_probabilities(
+            prior_prob[i], povm, problem_spec.states[i].data
+        )
+        print(probs)
+        total += sum(probs)
+
+    probability_matrix = []
+    for i in range(n):
+        probs = compute_event_probabilities(prior_prob[i], povm, problem_spec.states[i])
+        updated_probs = [0] * (len(prior_prob) + 1)
+        for j in range(strings_used):
+            target_state_index = bitstring_to_target_state[j]
+            updated_probs[target_state_index] += probs[j]
+        # TODO
+        # Postprocessing
+        probability_matrix.append(updated_probs)
+
+    for i in range(n):
+        p_d += probability_matrix[i][i]
+        p_inc += probability_matrix[i][n]
+
+    print(f"Total probability = {total:.4f}")
+    print(f"Success probability = {p_d:.4f}")
+    print(f"Inconclusive probability = {p_inc:.4f}")
+    # TODO also return these values
+    print()
+    save_prob_heatmap(
+        prior_prob,
+        povm,
+        problem_spec.states,
+        bitstring_to_target_state,
+        strings_used,
+        tag=rf"{n}_crossQD_$\alpha${alpha[0]:2f}_$\beta${beta[0]:2f}_l{noise_level:2f}",
+    )
+
+    # Return POVM
+    return povm, total, p_d, p_inc
+
+
 def apply_Eldar(problem_spec: ProblemSpec, prior_prob=None, min_prob=0):
     """Apply the method in Eldar's paper in 2003."""
     assert problem_spec.state_type == "statevector"
@@ -556,7 +955,9 @@ def apply_Eldar(problem_spec: ProblemSpec, prior_prob=None, min_prob=0):
     # TODO logger.info(f"CVXPY settings {}")
     t1 = time.time()
     # result = prob.solve(solver=cp.SCS, eps=1e-20)
-    result = prob.solve(solver=cp.SCS, verbose=False)  # , eps=1e-20)
+    result = prob.solve(
+        solver=cp.SCS, verbose=False, acceleration_lookback=10
+    )  # , eps=1e-20)
     # result = prob.solve(solver=cp.CPLEX, verbose=True, eps=1e-20)
     t2 = time.time()
     logger.info(f"CVXPY returns {prob.status}")
@@ -604,37 +1005,21 @@ def get_Phi_tilde(problem_spec: ProblemSpec):
 if __name__ == "__main__":
     # TODO
     # Simple tests or solver comparison?
-    parser = ArgumentParser()
-    parser.add_argument("-q", "--nqubits", default=2)
-    parser.add_argument("-n", "--nstates", default=3)
-    parser.add_argument("-s", "--seed", default=42)
-    args = parser.parse_args()
-    nq = int(args.nqubits)
-    ns = int(args.nstates)
-    seed = int(args.seed)
+    si = SolverInterface(__name__)
     noise_level = 0.3
-    case_id = f"q{nq}_n{ns}_s{seed}_mix_{noise_level}"
-    logging.basicConfig(
-        filename=f"solvers_{case_id}.log",
-        filemode="a",
-        format="{asctime} {levelname} {filename}:{lineno}: {message}",
-        datefmt="%Y-%m-%d %H:%M:%S",
-        style="{",
-        level=logging.DEBUG,
-        encoding="utf-8",
-    )
+    case_id = f"{si.case_id}_mix_{noise_level}"
+    logging.basicConfig(level=logging.DEBUG)
     logger = logging.getLogger(__name__)
-    logger.info(f"Start a new program")
-    logger.info(f"nq = {nq}, ns = {ns}, seed = {seed}")
+
     tracemalloc.start()
     problem = ProblemSpec(
-        num_qubits=nq, num_states=ns, case_id=case_id, state_type="densitymatrix"
+        num_qubits=si.nq, num_states=si.ns, case_id=case_id, state_type="densitymatrix"
     )
 
     states, disturbance_states, combined_states = ProblemSpec.gen_noisy_states(
-        num_qubits=nq,
-        num_states=ns,
-        seeds=get_random_seeds(ns, seed=seed),
+        num_qubits=si.nq,
+        num_states=si.ns,
+        seeds=get_random_seeds(si.ns, seed=si.state_seed),
         noise_level=noise_level,
         noise_rank=2,
     )
@@ -643,6 +1028,12 @@ if __name__ == "__main__":
     problem.set_states(state_type="densitymatrix", states=states)
     povm = apply_Eldar_mix(self=problem)
     povm = apply_Eldar_mix(self=problem, p_I=0.3)
+    print("Eldar 0")
+    povm = apply_Eldar_mix_primal(problem_spec=problem, beta=0)
+    print("Eldar 0.3")
+    povm = apply_Eldar_mix_primal(problem_spec=problem, beta=0.3)
+    print("Eldar 0.5")
+    povm = apply_Eldar_mix_primal(problem_spec=problem, beta=0.5)
     # TODO Save POVM
 
     # Noisy
@@ -653,18 +1044,45 @@ if __name__ == "__main__":
     print(0.1)
     povm = apply_dawei_mix_primal(problem_spec=problem, gamma=[0.1, 0.1, 0.1])
 
-    
     print(0.05)
     povm = apply_dawei_mix_primal(problem_spec=problem, gamma=[0.05, 0.05, 0.05])
 
     print(0.04)
     povm = apply_dawei_mix_primal(problem_spec=problem, gamma=[0.04, 0.04, 0.04])
 
-    for i in range(11):
-        a = 0.05 - i * 0.001
+    # Cross discrimination
+
+    # TODO Density matrices with noise
+    for i in range(10):
+        a = 0.01 - i * 0.001
         print(a)
         povm = apply_dawei_mix_primal(problem_spec=problem, gamma=[a] * 3)
         print()
+
+    for i in range(10):
+        a = 0.01 - i * 0.001
+        print(a)
+        povm = apply_dawei_mix_primal(problem_spec=problem, gamma=[a] * 3)
+        print()
+    print(0.2)
+    povm = apply_koova_mix_primal(problem_spec=problem, gamma=[0.2, 0.2, 0.2])
+
+    print(0.1)
+    povm = apply_koova_mix_primal(problem_spec=problem, gamma=[0.1, 0.1, 0.1])
+
+    print(0.05)
+    povm = apply_koova_mix_primal(problem_spec=problem, gamma=[0.05, 0.05, 0.05])
+
+    print(0.04)
+    povm = apply_koova_mix_primal(problem_spec=problem, gamma=[0.04, 0.04, 0.04])
+
+    for i in range(10):
+        a = 0.01 - i * 0.001
+        print(a)
+        povm = apply_koova_mix_primal(problem_spec=problem, gamma=[a] * 3)
+        print()
+    # TODO draw a plot of total success probability vs. threshold
+    # TODO draw with prior probabilities
 
     logger.info(f"Memory (current, peak, in bytes) = {tracemalloc.get_traced_memory()}")
     tracemalloc.stop()
