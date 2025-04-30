@@ -1,35 +1,39 @@
 # Suggested by Grok 3
 
 from concurrent.futures import ThreadPoolExecutor, TimeoutError
-from typing import Callable, Any, Tuple
-
+from typing import Callable, Any, Tuple, Dict
 
 def run_with_timeout(
-    func: Callable, args: Tuple = (), timeout: float = 2.0
+    func: Callable,
+    args: Tuple = (),
+    kwargs: Dict = None,
+    timeout: float = 2.0
 ) -> Any:
     """
-    Run a function with a timeout, using ThreadPoolExecutor for scalability.
-
+    Run a function with a timeout, supporting both positional and keyword arguments.
+    
     Args:
         func: Function to execute.
-        args: Tuple of arguments to pass to the function.
+        args: Tuple of positional arguments to pass to the function.
+        kwargs: Dictionary of keyword arguments to pass to the function.
         timeout: Timeout in seconds.
-
+    
     Returns:
         The function's result if completed within the timeout.
-
+    
     Raises:
         TimeoutError: If the function exceeds the timeout.
         Exception: If the function raises any other exception.
     """
+    if kwargs is None:
+        kwargs = {}
+    
     with ThreadPoolExecutor(max_workers=1) as executor:
-        future = executor.submit(func, *args)
+        future = executor.submit(func, *args, **kwargs)
         try:
             return future.result(timeout=timeout)
         except TimeoutError:
-            raise TimeoutError(
-                f"Function {func.__name__} timed out after {timeout} seconds"
-            )
+            raise TimeoutError(f"Function {func.__name__} timed out after {timeout} seconds")
         except Exception as e:
             raise e
 
