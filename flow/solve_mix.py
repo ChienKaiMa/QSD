@@ -1,6 +1,6 @@
 import logging.config
-from interface import *
-from problem_spec import *
+from flow.interface import *
+from flow.problem_spec import *
 from flow.plots import compute_event_probabilities, save_prob_heatmap
 from flow.verify_povm import *
 import numpy as np
