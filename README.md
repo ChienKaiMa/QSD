@@ -26,10 +26,27 @@ sudo apt install libomp-dev -y
 Reference:
 - https://www.cvxgrp.org/scs/install/python.html#python-install
 
+Assume that you are at your project root folder.
 ```bash
- git clone --recursive https://github.com/bodono/scs-python.git
- cd scs-python
- uv pip install --verbose -Csetup-args=-Dlink_mkl=true .
- uv pip install pytest
- python -m pytest .
+# Sync the dependencies in pyproject.toml
+uv sync
+# Activate the environment
+source .venv/bin/activate
+```
+Then,
+```bash
+git clone --recursive https://github.com/bodono/scs-python.git
+cd scs-python
+
+# Build the wheel for SCS with MKL interface.
+# pyproject.toml will find the wheel when syncing.
+uv build --wheel -Csetup-args=-Dlink_mkl=true .
+# uv pip install --verbose -Csetup-args=-Dlink_mkl=true .
+```
+```bash
+# Verify installation
+uv pip install pytest
+python -m pytest .
+cd ../
+uv sync
 ```
