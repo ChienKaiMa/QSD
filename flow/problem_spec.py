@@ -37,7 +37,10 @@ class ProblemSpec:
         self.num_ops = num_states
         self.states = []
         self.constraints = []
-        self.prior_prob = prior_prob
+        if prior_prob is None:
+            self.prior_prob = [1/self.num_states for _ in range(self.num_states)]
+        else:
+            self.prior_prob = prior_prob
         self.state_type = state_type
 
     @staticmethod
