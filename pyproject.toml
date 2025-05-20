@@ -1,0 +1,45 @@
+[project]
+name = "qsd"
+version = "0.1.0"
+description = "A toolbox for quantum state discrimination"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "cvxpy==1.6.0",
+    "qiskit>=1.0.0",
+    "qutip==5.0.3",
+    "scikit-optimize==0.10.2",
+    # "xgboost>=2.0.3",  # Gradient boosting
+    "matplotlib>=3.8.0",  # Plotting
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=7.4.0",  # Testing
+    "ruff>=0.5.0",  # Linting
+    "black>=24.4.0",  # Formatting
+]
+docs = [
+    "sphinx>=7.0.0",  # Documentation
+]
+
+[tool.uv]
+# Optional: Configure uv-specific settings
+exclude-newer = "2025-05-01T00:00:00Z"  # Avoid bleeding-edge versions
+index = [{ url = "https://pypi.org/simple", default = true }]
+
+[tool.uv.sources]
+# Example for a local package or non-PyPI dependency
+# my_local_package = { path = "../my_local_package" }
+
+# [build-system]
+# requires = ["hatchling"]
+# build-backend = "hatchling.build"
+
+# Optional: UniDep for Conda compatibility
+# [tool.unidep]
+# channels = ["conda-forge"]
+# dependencies = [
+#     "numpy",  # Same name on Conda and pip
+#     { conda = "mumps", pip = "25.1.1" },  # Conda-only package
+# ]
