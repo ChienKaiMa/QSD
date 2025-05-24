@@ -1,0 +1,3 @@
+[submodule "scs-python"]
+	path = scs-python
+	url = https://github.com/bodono/scs-python.git
