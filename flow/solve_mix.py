@@ -1107,7 +1107,10 @@ if __name__ == "__main__":
 
     tracemalloc.start()
     problem = ProblemSpec(
-        num_qubits=si.nq, num_states=si.ns, case_id=case_id, state_type="densitymatrix"
+        num_qubits=si.nq,
+        num_states=si.ns,
+        case_id=case_id,
+        state_type="densitymatrix",
     )
 
     states, disturbance_states, combined_states = ProblemSpec.gen_noisy_states(
@@ -1132,17 +1135,6 @@ if __name__ == "__main__":
 
     # Noisy
     problem.set_states(state_type="densitymatrix", states=combined_states)
-    print(0.2)
-    povm = apply_dawei_mix_primal(problem_spec=problem, gamma=[0.2, 0.2, 0.2])
-
-    print(0.1)
-    povm = apply_dawei_mix_primal(problem_spec=problem, gamma=[0.1, 0.1, 0.1])
-
-    print(0.05)
-    povm = apply_dawei_mix_primal(problem_spec=problem, gamma=[0.05, 0.05, 0.05])
-
-    print(0.04)
-    povm = apply_dawei_mix_primal(problem_spec=problem, gamma=[0.04, 0.04, 0.04])
 
     # Cross discrimination
 
@@ -1158,17 +1150,6 @@ if __name__ == "__main__":
         print(a)
         povm = apply_dawei_mix_primal(problem_spec=problem, gamma=[a] * 3)
         print()
-    print(0.2)
-    povm = apply_koova_mix_primal(problem_spec=problem, gamma=[0.2, 0.2, 0.2])
-
-    print(0.1)
-    povm = apply_koova_mix_primal(problem_spec=problem, gamma=[0.1, 0.1, 0.1])
-
-    print(0.05)
-    povm = apply_koova_mix_primal(problem_spec=problem, gamma=[0.05, 0.05, 0.05])
-
-    print(0.04)
-    povm = apply_koova_mix_primal(problem_spec=problem, gamma=[0.04, 0.04, 0.04])
 
     for i in range(10):
         a = 0.01 - i * 0.001
@@ -1178,7 +1159,9 @@ if __name__ == "__main__":
     # TODO draw a plot of total success probability vs. threshold
     # TODO draw with prior probabilities
 
-    logger.info(f"Memory (current, peak, in bytes) = {tracemalloc.get_traced_memory()}")
+    logger.info(
+        f"Memory (current, peak, in bytes) = {tracemalloc.get_traced_memory()}"
+    )
     tracemalloc.stop()
     np.save(f"povm_{case_id}.npy", povm)
     logger.info(f"The POVM is saved to povm_{case_id}.npy")
