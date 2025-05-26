@@ -34,12 +34,16 @@ def apply_Eldar_mix(self, prior_prob=None, p_I=0):
     objective = cp.Minimize(cp.trace(X) - delta_scalar * beta)
 
     # TODO [Priority: Low] add assertions
-    Delta = np.sum([np.multiply(prior_prob[i], self.states[i].data) for i in range(n)])
+    Delta = np.sum(
+        [np.multiply(prior_prob[i], self.states[i].data) for i in range(n)]
+    )
 
     # Matrix inequality uses >>
     constraints = []
     for i in range(n):
-        constraints.append(X - np.multiply(prior_prob[i], self.states[i].data) >> 0)
+        constraints.append(
+            X - np.multiply(prior_prob[i], self.states[i].data) >> 0
+        )
     constraints.append(X - cp.multiply(delta_scalar, Delta) >> 0)
     constraints.append(X >> 0)
     # TODO Add different constraint configurations
@@ -204,7 +208,9 @@ def apply_Eldar_mix_primal(problem_spec: ProblemSpec, prior_prob=None, beta=0):
         cp.sum(
             [
                 prior_prob[i]
-                * cp.real(cp.trace(cp.matmul(problem_spec.states[i].data, PI_list[i])))
+                * cp.real(
+                    cp.trace(cp.matmul(problem_spec.states[i].data, PI_list[i]))
+                )
                 for i in range(n)
             ]
         )
@@ -221,7 +227,9 @@ def apply_Eldar_mix_primal(problem_spec: ProblemSpec, prior_prob=None, beta=0):
             cp.sum(
                 [
                     prior_prob[j]
-                    * cp.trace(cp.matmul(problem_spec.states[j].data, PI_list[n]))
+                    * cp.trace(
+                        cp.matmul(problem_spec.states[j].data, PI_list[n])
+                    )
                     for j in range(n)
                 ]
             )
