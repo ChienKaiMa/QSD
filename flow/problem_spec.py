@@ -1,10 +1,10 @@
 import sys
 import logging
-from argparse import *
+# from argparse import *
 import numpy as np
 
-sys.path.append("../")
-sys.path.append("./")
+# sys.path.append("../")
+# sys.path.append("./")
 from qiskit.quantum_info import (
     random_statevector,
     random_density_matrix,
@@ -35,7 +35,9 @@ class ProblemSpec:
             self.case_id = case_id
         self.num_amps = 2**num_qubits
         self.num_ops = num_states
-        self.states = []
+        self.states = None
+        self.pure_states = []
+        self.mixed_states = []
         self.constraints = []
         if prior_prob is None:
             self.prior_prob = [1/self.num_states for _ in range(self.num_states)]
@@ -116,6 +118,10 @@ class ProblemSpec:
         assert num_qubits > 0
         return np.identity(2**num_qubits) / 2**num_qubits
 
+    def add_depolarizing_noise_channel(states: list):
+        
+        return 
+
     def is_lin_indep(self):
         """Check the vectors are linearly independent."""
         l = []
@@ -125,6 +131,7 @@ class ProblemSpec:
         rank = np.linalg.matrix_rank(m)
         print("Rank =", rank)
         print("#states =", self.num_states)
+        return self.num_states <= rank
 
     def gen_noisy_states(
         num_qubits: int,
