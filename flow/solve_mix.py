@@ -129,8 +129,11 @@ def apply_Eldar_mix(self, prior_prob=None, p_I=0):
     print("Probabilities for each state:")
     total = 0
     p_d = 0
+    povm = vectors_to_povm(povm)
     for i in range(n):
-        probs = compute_event_probabilities(povm, self.states[i].data)
+        probs = compute_event_probabilities(
+            prior_prob, povm, self.states[i].data
+        )
         print(np.array(probs))
         total += prior_prob[i] * sum(probs)
         p_d += prior_prob[i] * probs[i]
@@ -266,12 +269,32 @@ def apply_Eldar_mix_primal(
         return
 
     povm = []
+    # TODO
+    # Check the rank of the Hermitian operators
+    # Log the rank of the Hermitian operators
+    # Dictionary of measured bitstrings to the target states
+    bitstring_to_target_state = dict()
+
+    strings_used = 0
     for i in range(n + 1):
-        print(f"Solution for PI_{i} =")
-        print(PI_list[i].value)
+        ## print(f"Solution for PI_{i} =")
+        ## print(PI_list[i].value)
         u, s, v = np.linalg.svd(PI_list[i].value, hermitian=True)
-        last_povm = u[:, 0] * np.sqrt(s[0])
-        povm.append(last_povm.conj())
+        for j in range(len(s)):
+            # Don't add if s[j] too small
+            if s[j] > 1e-7:
+                last_povm = u[:, j] * np.sqrt(s[j])
+                bitstring_to_target_state[strings_used] = i
+                povm.append(last_povm.conj())
+                strings_used += 1
+
+    problem_spec.bitstring_to_target_state = bitstring_to_target_state.copy()
+    print("bitstring_to_target_state")
+    print(bitstring_to_target_state)
+    print("strings_used")
+    print(strings_used)
+    # TODO save strings_used somewhere
+    #
 
     # TODO
     # Calculate the measurement operators
@@ -287,14 +310,25 @@ def apply_Eldar_mix_primal(
     ## # print(last_povm)
     ## povm.append(last_povm.conj())
 
+    # TODO Uncomment these lines
+    ## if not verify_povm(povm):
+    ##     print("POVM check failed.")
+    ##     return False
+    ## else:
+    ##     print("POVM check passed.")
+
     # TODO
     # Verify solution
+    np.set_printoptions(precision=4)
     print("Probabilities for each state:")
     total = 0
     p_d = 0
-    inc_prob = 0
+    p_inc = 0
+    povm = vectors_to_povm(povm)
     for i in range(n):
-        probs = compute_event_probabilities(povm, problem_spec.states[i].data)
+        probs = compute_event_probabilities(
+            prior_prob[i], povm, problem_spec.states[i].data
+        )
         print(probs)
         total += sum(probs)
 
