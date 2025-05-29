@@ -31,25 +31,25 @@ def compute_event_probabilities(prior_prob, povm, state: np.array):
         probs.append(prior_prob * abs(trace_value.real))
     return probs
 
-## def calculate_prob_matrix(
-##     prior_probs, povm, states, bitstring_to_target_state, strings_used
-## ):
-##     probability_matrix = []
-##     for i in range(len(states)):
-##         probs = compute_event_probabilities(prior_probs[i], povm, states[i])
-##         updated_probs = [0] * (len(prior_probs) + 1)
-##         print("len(povm)", len(povm))
-##         print("len(probs)", len(probs))
-##         print("strings_used", strings_used)
-##         for j in range(strings_used):
-##             target_state_index = bitstring_to_target_state[j]
-##             updated_probs[target_state_index] += probs[j]
-##         # TODO
-##         # Postprocessing
-##         probability_matrix.append(updated_probs)
-##     return probability_matrix
-##
-##
+def calculate_prob_matrix(
+    prior_probs, povm, states, bitstring_to_target_state, strings_used
+):
+    probability_matrix = []
+    for i in range(len(states)):
+        probs = compute_event_probabilities(prior_probs[i], povm, states[i])
+        updated_probs = [0] * (len(prior_probs) + 1)
+        print("len(povm)", len(povm))
+        print("len(probs)", len(probs))
+        print("strings_used", strings_used)
+        for j in range(strings_used):
+            target_state_index = bitstring_to_target_state[j]
+            updated_probs[target_state_index] += probs[j]
+        # TODO
+        # Postprocessing
+        probability_matrix.append(updated_probs)
+    return probability_matrix
+
+
 def calculate_prob_matrix_simple(prior_probs, povm, states):
     """Calculate the probabilities without mapping"""
     assert len(povm) == len(states) + 1
