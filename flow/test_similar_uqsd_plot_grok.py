@@ -1,6 +1,8 @@
 from solve_mix import *
 import numpy as np
 import matplotlib.pyplot as plt
+plt.switch_backend("TkAgg")
+from matplotlib.ticker import MaxNLocator
 from utils.handy_states import *
 from datetime import datetime
 from qiskit.quantum_info import Statevector, DensityMatrix
@@ -87,7 +89,7 @@ def grad_descent_param(alpha_init, beta_init, cvxpy_problem, problem_spec, ideal
     plt.xlabel("Iteration")
     plt.title(f"Optimization at Noise Level {noise_level:.6f}")
     ax = fg.gca()
-    from matplotlib.ticker import MaxNLocator
+    
     ax.xaxis.set_major_locator(MaxNLocator(nbins=5,integer=True))
     plt.legend()
     plt.grid(True)
