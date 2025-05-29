@@ -187,7 +187,12 @@ def apply_Eldar_mix(self, prior_prob=None, p_I=0):
     return
 
 
-def apply_Eldar_mix_primal(problem_spec: ProblemSpec, prior_prob=None, beta=0):
+def apply_Eldar_mix_primal(
+    problem_spec: ProblemSpec,
+    prior_prob=None,
+    beta=0,
+    is_cvxpy_verbose=False,
+):
     """Apply Eldar's formulation.
     The predefined portion of inconclusive results. [0, 1)
     """
@@ -246,7 +251,13 @@ def apply_Eldar_mix_primal(problem_spec: ProblemSpec, prior_prob=None, beta=0):
     constraints.append(cp.sum(PI_list) == I)
 
     prob = cp.Problem(objective, constraints)
-    result = prob.solve(solver=cp.SCS, eps=1e-10, acceleration_lookback=10)
+    result = prob.solve(
+        solver=cp.SCS,
+        # eps=1e-10,
+        mkl=True,
+        verbose=is_cvxpy_verbose,
+        acceleration_lookback=10,
+    )
     print("Result =", result)
     print(f"CVXPY returns {prob.status}")
     logger.info(f"CVXPY returns {prob.status}")
@@ -285,20 +296,56 @@ def apply_Eldar_mix_primal(problem_spec: ProblemSpec, prior_prob=None, beta=0):
     for i in range(n):
         probs = compute_event_probabilities(povm, problem_spec.states[i].data)
         print(probs)
-        total += prior_prob[i] * sum(probs)
-        p_d += prior_prob[i] * probs[i]
-        inc_prob += prior_prob[i] * probs[n]
-    print("Total probability =", total)
-    print("Success probability =", p_d)
-    print("Inconclusive probability =", inc_prob)
+        total += sum(probs)
+
+    probability_matrix = []
+    for i in range(n):
+        probs = compute_event_probabilities(
+            prior_prob[i], povm, problem_spec.states[i].data
+        )
+        updated_probs = [0] * (len(prior_prob) + 1)
+        for j in range(strings_used):
+            target_state_index = bitstring_to_target_state[j]
+            updated_probs[target_state_index] += probs[j]
+        # TODO
+        # Postprocessing
+        probability_matrix.append(updated_probs)
+
+    for i in range(n):
+        p_d += probability_matrix[i][i]
+        p_inc += probability_matrix[i][n]
+
+    print(f"Total probability = {total:.4f}")
+    print(f"Success probability = {p_d:.4f}")
+    print(f"Inconclusive probability = {p_inc:.4f}")
+    # TODO also return these values
     print()
+    # save_prob_heatmap(
+    #     prior_prob,
+    #     povm,
+    #     problem_spec.states,
+    #     bitstring_to_target_state,
+    #     strings_used,
+    #     tag=rf"{n}_crossQD_$\alpha${alpha[0]:2f}_$\beta${beta[0]:2f}_l{noise_level:2f}",
+    #     reuse_fig=reuse_fig,
+    # )
 
-    # TODO
-    # Return POVM
-    return
+    result_dict = defaultdict()
+    result_dict["povm"] = povm
+    result_dict["total_prob"] = total
+    # result_dict["p_succ"] = p_succ
+    # result_dict["p_err"] = p_err
+    result_dict["p_inc"] = p_inc
+    result_dict["PI_list"] = [PI_list[i].value for i in range(len(PI_list))]
+    result_dict["bitstring_to_target_state"] = bitstring_to_target_state
+    result_dict["strings_used"] = strings_used
+
+    return result_dict
 
 
-def apply_koova_mix_primal(problem_spec: ProblemSpec, prior_prob=None, gamma=None):
+def apply_koova_mix_primal(
+    problem_spec: ProblemSpec, prior_prob=None, gamma=None
+):
     """Apply Koova's formulation.
     gamma: Threshold probabilities. List of [0, 1)
     """
@@ -998,7 +1045,195 @@ def gen_crossQD_dpp_problem(
         constraints.append(
             cp.real(expr_lhs) >= cp.real(expr_rhs) * (1 - beta[i])
         )
-    
+
+    # Constraint 4. Completeness
+    I = np.identity(problem_spec.num_amps)
+    constraints.append(cp.sum(PI_list) == I)
+
+    return cp.Problem(objective, constraints)
+
+
+def gen_crossQD_dpp_problem_symm(
+    problem_spec: ProblemSpec,
+    prior_prob=None,
+    noise_level=0,  # TODO
+    noise_type=None,  # TODO
+) -> cp.Problem:
+    """Generate a semidefinite programming problem that satisfies the
+    disciplined parametrized programming (DPP) ruleset. After the values
+    of the parameters are specified, the CVXPY solver should solve for a
+    POVM for the cross quantum discrimination (crossQD) method.
+    Now we assume that the effect of the noise is already included in
+    the density matrices of `problem_spec` (`problem_spec.states`).
+    Access the parameters with cvxpy_problem.param_dict() ?
+    Here, we use only one parameter since we know the states are symmetric.
+    """
+    assert problem_spec.state_type == "densitymatrix"
+    logger = logging.getLogger(__name__)
+    np.set_printoptions(precision=4)
+
+    n = problem_spec.num_states
+    # prior_prob = cp.Parameter(n, name="prior_prob")
+    # Tolerance
+    tol = cp.Parameter(name="tol")
+
+    # https://www.cvxpy.org/tutorial/dpp/index.html
+    # DPP forbids taking the product of two parametrized expressions,
+    # so we will not parametrize prior probabilities.
+    if prior_prob is None:
+        prior_prob = np.ones(n) * (1 / n)
+        logger.info(f"The prior probabilities is set to uniform (n = {n})")
+    else:
+        logger.info(f"The prior probabilities is set to {prior_prob}")
+
+    # PI is the variable for the POVM we try to solve for.
+    PI_list = [
+        cp.Variable(
+            shape=(problem_spec.num_amps, problem_spec.num_amps),
+            hermitian=True,
+            name=f"PI_{i}",
+        )
+        for i in range(n + 1)
+    ]
+
+    objective = cp.Maximize(
+        cp.sum(
+            [
+                prior_prob[i]
+                * cp.real(
+                    cp.trace(cp.matmul(problem_spec.states[i].data, PI_list[i]))
+                )
+                for i in range(n)
+            ]
+        )
+    )
+
+    constraints = []
+
+    # Constraint 1. Positive operators
+    for i in range(n + 1):
+        constraints.append(PI_list[i] >> 0)
+
+    # Constraint 2. Conditional probability with respect to the measurement operator
+    # prior_prob[i] is divided on both sides
+    for i in range(n):
+        expr_lhs = cp.trace(cp.matmul(problem_spec.states[i].data, PI_list[i]))
+        expr_rhs = cp.sum(
+            [
+                cp.trace(cp.matmul(problem_spec.states[i].data, PI_list[j]))
+                for j in range(n)
+            ]
+        )
+        constraints.append(cp.real(expr_lhs) >= cp.real(expr_rhs) * (1 - tol))
+
+    # Constraint 3. Conditional probability with respect to the input state
+    for i in range(n):
+        expr_lhs = prior_prob[i] * cp.trace(
+            cp.matmul(problem_spec.states[i].data, PI_list[i])
+        )
+        expr_rhs = cp.sum(
+            [
+                prior_prob[j]
+                * cp.trace(cp.matmul(problem_spec.states[j].data, PI_list[i]))
+                for j in range(n)
+            ]
+        )
+        constraints.append(cp.real(expr_lhs) >= cp.real(expr_rhs) * (1 - tol))
+
+    # Constraint 4. Completeness
+    I = np.identity(problem_spec.num_amps)
+    constraints.append(cp.sum(PI_list) == I)
+
+    return cp.Problem(objective, constraints)
+
+
+def gen_crossQD_jsd_dpp_problem_symm(
+    problem_spec: ProblemSpec,
+    prior_prob=None,
+    noise_level=0,  # TODO
+    noise_type=None,  # TODO
+) -> cp.Problem:
+    """Generate a semidefinite programming problem that satisfies the
+    disciplined parametrized programming (DPP) ruleset. After the values
+    of the parameters are specified, the CVXPY solver should solve for a
+    POVM for the cross quantum discrimination (crossQD) method.
+    Now we assume that the effect of the noise is already included in
+    the density matrices of `problem_spec` (`problem_spec.states`).
+    Access the parameters with cvxpy_problem.param_dict() ?
+    Here, we use only one parameter since we know the states are symmetric.
+    """
+    assert problem_spec.state_type == "densitymatrix"
+    logger = logging.getLogger(__name__)
+    np.set_printoptions(precision=4)
+
+    n = problem_spec.num_states
+    # prior_prob = cp.Parameter(n, name="prior_prob")
+    # Tolerance
+    tol = cp.Parameter(name="tol")
+
+    # https://www.cvxpy.org/tutorial/dpp/index.html
+    # DPP forbids taking the product of two parametrized expressions,
+    # so we will not parametrize prior probabilities.
+    if prior_prob is None:
+        prior_prob = np.ones(n) * (1 / n)
+        logger.info(f"The prior probabilities is set to uniform (n = {n})")
+    else:
+        logger.info(f"The prior probabilities is set to {prior_prob}")
+
+    # PI is the variable for the POVM we try to solve for.
+    PI_list = [
+        cp.Variable(
+            shape=(problem_spec.num_amps, problem_spec.num_amps),
+            hermitian=True,
+            name=f"PI_{i}",
+        )
+        for i in range(n + 1)
+    ]
+
+    objective = cp.Maximize(
+        cp.sum(
+            [
+                prior_prob[i]
+                * cp.real(
+                    cp.trace(cp.matmul(problem_spec.states[i].data, PI_list[i]))
+                )
+                for i in range(n)
+            ]
+        )
+    )
+
+    constraints = []
+
+    # Constraint 1. Positive operators
+    for i in range(n + 1):
+        constraints.append(PI_list[i] >> 0)
+
+    # Constraint 2. Conditional probability with respect to the measurement operator
+    # prior_prob[i] is divided on both sides
+    for i in range(n):
+        expr_lhs = cp.trace(cp.matmul(problem_spec.states[i].data, PI_list[i]))
+        expr_rhs = cp.sum(
+            [
+                cp.trace(cp.matmul(problem_spec.states[i].data, PI_list[j]))
+                for j in range(n)
+            ]
+        )
+        constraints.append(cp.real(expr_lhs) >= cp.real(expr_rhs) * (1 - tol))
+
+    # Constraint 3. Conditional probability with respect to the input state
+    for i in range(n):
+        expr_lhs = prior_prob[i] * cp.trace(
+            cp.matmul(problem_spec.states[i].data, PI_list[i])
+        )
+        expr_rhs = cp.sum(
+            [
+                prior_prob[j]
+                * cp.trace(cp.matmul(problem_spec.states[j].data, PI_list[i]))
+                for j in range(n)
+            ]
+        )
+        constraints.append(cp.real(expr_lhs) >= cp.real(expr_rhs) * (1 - tol))
+
     # Constraint 4. Completeness
     I = np.identity(problem_spec.num_amps)
     constraints.append(cp.sum(PI_list) == I)
@@ -1148,7 +1383,9 @@ if __name__ == "__main__":
     )
 
     # Ideal, but use the new formulation
-    problem.set_states(state_type="densitymatrix", states=states)
+    problem.set_states(
+        state_type="densitymatrix", states=states, overwrite=True
+    )
     povm = apply_Eldar_mix(self=problem)
     povm = apply_Eldar_mix(self=problem, p_I=0.3)
     print("Eldar 0")
