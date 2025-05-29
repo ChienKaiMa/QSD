@@ -12,6 +12,7 @@ dependencies = [
     # "xgboost>=2.0.3",  # Gradient boosting
     "matplotlib>=3.8.0",  # Plotting
     "pandas",
+    "seaborn",
     "scs @ file:///${PROJECT_ROOT}/scs-python/dist/scs-3.2.7-cp310-cp310-linux_x86_64.whl",  # Ensure build with MKL
 ]
 
