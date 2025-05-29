@@ -1006,8 +1006,12 @@ def gen_crossQD_dpp_problem(
     return cp.Problem(objective, constraints)
 
 
-
-def apply_Eldar(problem_spec: ProblemSpec, prior_prob=None, min_prob=0):
+def apply_Eldar(
+    problem_spec: ProblemSpec,
+    prior_prob=None,
+    min_prob=0,
+    is_cvxpy_verbose=False,
+):
     """Apply the method in Eldar's paper in 2003."""
     assert problem_spec.state_type == "statevector"
     logger = logging.getLogger(__name__)
@@ -1057,19 +1061,22 @@ def apply_Eldar(problem_spec: ProblemSpec, prior_prob=None, min_prob=0):
     t1 = time.time()
     # result = prob.solve(solver=cp.SCS, eps=1e-20)
     result = prob.solve(
-        solver=cp.SCS, verbose=False, acceleration_lookback=10
+        solver=cp.SCS, verbose=is_cvxpy_verbose, acceleration_lookback=10
     )  # , eps=1e-20)
-    # result = prob.solve(solver=cp.CPLEX, verbose=True, eps=1e-20)
+    # result = prob.solve(solver=cp.CPLEX, verbose=is_cvxpy_verbose, eps=1e-20)
     t2 = time.time()
+    solver_time_str = np.format_float_scientific(t2 - t1, precision=4)
+    logger.info(f"Solution time (rounded) = {solver_time_str} seconds")
     logger.info(f"CVXPY returns {prob.status}")
-    # if prob.status == 'optimal':
-    #     pass
-    # else:
-    #     pass
-    logger.info(f"Solution time (rounded) = {round((t2 - t1), 4)} seconds")
+    if prob.status != "optimal" and prob.status != "optimal_inaccurate":
+        logger.error(f"CVXPY returns {prob.status}")
+        return False
     logger.info(f"Result (rounded) = {result.round(4)}")
     sol = p.value
     logger.info(f"Solution (rounded) = {sol.round(4)}")
+    p_succ = 0
+    for i in range(n):
+        p_succ += -prior_prob[i] * sol[i]
 
     # Obtain POVMs
     povm = []
@@ -1080,10 +1087,22 @@ def apply_Eldar(problem_spec: ProblemSpec, prior_prob=None, min_prob=0):
             )
             continue
         else:
-            povm.append(np.sqrt(sol[i]) * Phi_tilde[i].conj())
-
+            # povm.append(np.sqrt(sol[i]) * Phi_tilde[i].conj())
+            povm.append(sol[i] * q[i])
+    povm.append(expr.value)
+    distrib = []
+    for i in range(n):
+        distrib.append(-sol[i] * prior_prob[i])
+    distrib.append(1 - p_succ)
     # TODO Remember the remaining operators
-    return povm
+    result_dict = defaultdict(int)
+    result_dict["povm"] = povm
+    result_dict["sol"] = sol
+    result_dict["distrib"] = distrib
+    result_dict["p_succ"] = p_succ
+    result_dict["p_err"] = 0
+    result_dict["p_inc"] = 1 - p_succ
+    return result_dict
 
 
 def get_Phi_tilde(problem_spec: ProblemSpec):
