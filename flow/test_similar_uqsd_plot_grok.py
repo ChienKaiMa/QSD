@@ -1,7 +1,8 @@
 from solve_mix import *
 import numpy as np
+import matplotlib
+matplotlib.use("webagg")
 import matplotlib.pyplot as plt
-plt.switch_backend("TkAgg")
 from matplotlib.ticker import MaxNLocator
 from utils.handy_states import *
 from datetime import datetime
