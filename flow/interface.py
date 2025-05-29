@@ -42,6 +42,11 @@ class SolverInterface:
             default="ideal",
             help="Tag for the experiments",
         )
+        parser.add_argument(
+            "--quick_access",
+            default="sic",
+            help="Quick access of testcases",
+        )
         args = parser.parse_args()
         self.nq = int(args.nqubits)
         self.ns = int(args.nstates)
@@ -51,6 +56,7 @@ class SolverInterface:
         # Add other parameters
 
         self.tag = args.tag
+        self.quick_access = args.quick_access
 
         if self.tag:
             self.case_id = f"q{self.nq}_n{self.ns}_s{self.state_seed}_{self.tag}"
