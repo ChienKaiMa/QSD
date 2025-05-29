@@ -11,6 +11,7 @@ dependencies = [
     "scikit-optimize==0.10.2",
     # "xgboost>=2.0.3",  # Gradient boosting
     "matplotlib>=3.8.0",  # Plotting
+    "pandas",
     "scs @ file:///${PROJECT_ROOT}/scs-python/dist/scs-3.2.7-cp310-cp310-linux_x86_64.whl",  # Ensure build with MKL
 ]
 
