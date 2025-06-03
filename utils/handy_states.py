@@ -4,7 +4,28 @@ from utils.printing import *
 from utils.sic_expand import *
 from utils.sic_fiducial_state import *
 from qutip import coherent, coherent_dm
+from qiskit import QuantumCircuit
 from qiskit.quantum_info import Statevector, DensityMatrix
+import numpy as np
+
+
+def sv_simple_1(theta = np.pi / 4):
+    """Two quantum states with a pre-specified absolute value of
+    inner product."""
+
+    # Initialize |0⟩ state
+    qc0 = QuantumCircuit(1)  # 1 qubit, |0⟩ by default
+    statevector_0 = Statevector(qc0).data
+
+    # Initialize θ-rotated state (using Ry rotation)
+    qc_rot = QuantumCircuit(1)
+    qc_rot.ry(theta, 0)
+    statevector_rot = Statevector(qc_rot).data
+
+    states = []
+    states.append(statevector_0)
+    states.append(statevector_rot)
+    return {"num_qubits": 1, "num_states": 2, "states": states}
 
 
 def sv_sic_symm_small():
