@@ -912,10 +912,10 @@ def apply_crossQD(
                 strings_used += 1
 
     problem_spec.bitstring_to_target_state = bitstring_to_target_state.copy()
-    print("bitstring_to_target_state")
-    print(bitstring_to_target_state)
-    print("strings_used")
-    print(strings_used)
+    ## print("bitstring_to_target_state")
+    ## print(bitstring_to_target_state)
+    ## print("strings_used")
+    ## print(strings_used)
     # TODO save strings_used somewhere
     #
 
@@ -966,9 +966,8 @@ def apply_crossQD(
             updated_probs[target_state_index] += probs[j]
         # TODO
         # Postprocessing
+        print(update_probs)
         probability_matrix.append(updated_probs)
-    
-    print(probability_matrix)
 
     for i in range(n):
         p_d += probability_matrix[i][i]
