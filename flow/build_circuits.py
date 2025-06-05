@@ -2,7 +2,7 @@ import sys
 
 sys.path.append("../")
 sys.path.append("./")
-from problem_spec import *
+from flow.problem_spec import *
 from temp.get_random_seeds import *
 
 import time
