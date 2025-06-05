@@ -19,10 +19,9 @@ from qiskit import transpile
 import qclib.isometry
 
 service = qiskit_ibm_runtime.QiskitRuntimeService(
-    channel="ibm_quantum",
-    # instance="ibm-q/open/main",
-    instance="ibm-q-hub-ntu/ntu-internal/default",
-    token="e421d41292d0977e88ca2900d333e6b6789377af70e1923ba067e97afb929b2da3cd64bba701d1519067002f9c1fabe1e55c47a5539b12d8ec55b85864f6092d",
+    channel='ibm_quantum',
+    instance='ibm-q-hub-ntu/jiang-jie-hong/default',
+    token="b49854f9530507490413d6c62e39bfe88adeb005bca7c3e363ef889fd44bb4e751dba1f9ba90d7dd5269e220c176e9d6f0d80fa5489945a2a5a19466ac51f543",
 )
 
 
@@ -149,7 +148,7 @@ class POVMCircuit:
         return qc_iso
 
     def transpile_with_backend(self, logger, qc_iso, service):
-        backend_name = "ibm_brisbane"
+        backend_name = "ibm_fez"
         ibm_backend = service.backend(backend_name)
         t_start = time.time()
         qc_iso = transpile(qc_iso, backend=ibm_backend)
