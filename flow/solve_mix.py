@@ -1372,6 +1372,7 @@ def apply_Eldar(
 
     # Obtain POVMs
     povm = []
+    povm_vectors = []
     for i in range(n):
         if sol[i] <= 1e-4:
             logger.warning(
@@ -1380,7 +1381,9 @@ def apply_Eldar(
             continue
         else:
             # povm.append(np.sqrt(sol[i]) * Phi_tilde[i].conj())
+            povm_vectors.append(np.sqrt(sol[i]) * Phi_tilde[i].conj())
             povm.append(sol[i] * q[i])
+
     povm.append(expr.value)
     distrib = []
     for i in range(n):
@@ -1389,6 +1392,7 @@ def apply_Eldar(
     # TODO Remember the remaining operators
     result_dict = defaultdict(int)
     result_dict["povm"] = povm
+    result_dict["povm_vectors"] = povm_vectors
     result_dict["sol"] = sol
     result_dict["distrib"] = distrib
     result_dict["p_succ"] = p_succ
