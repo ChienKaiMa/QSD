@@ -830,7 +830,13 @@ def apply_dawei_mix(problem_spec: ProblemSpec, prior_prob=None, gamma=None):
 
 
 def apply_crossQD(
-    problem_spec: ProblemSpec, prior_prob=None, alpha=None, beta=None, noise_level=0
+    problem_spec: ProblemSpec,
+    prior_prob=None,
+    alpha=None,
+    beta=None,
+    noise_level=0,
+    reuse_fig=None,
+    is_cvxpy_verbose=False,
 ):
     """Apply the cross quantum discrimination method.
     beta: Threshold probabilities. List of [0, 1)
@@ -855,71 +861,29 @@ def apply_crossQD(
         beta = [0.01] * n
     logger.info(f"The threshold probabilities (beta) are set to {beta}")
 
-    # TODO
-    PI_list = []
-    for i in range(n + 1):
-        PI = cp.Variable(
-            shape=(problem_spec.num_amps, problem_spec.num_amps),
-            hermitian=True,
-            name=f"PI_{i}",
-        )
-        PI_list.append(PI)
-
-    objective = cp.Maximize(
-        cp.sum(
-            [
-                prior_prob[i]
-                * cp.real(cp.trace(cp.matmul(problem_spec.states[i].data, PI_list[i])))
-                for i in range(n)
-            ]
-        )
+    cvxpy_problem = gen_crossQD_dpp_problem(
+        problem_spec=problem_spec,
+        prior_prob=prior_prob,
     )
 
-    # TODO constraints
-    I = np.identity(problem_spec.num_amps)
-    constraints = []
-    for i in range(n + 1):
-        constraints.append(PI_list[i] >> 0)
+    cvxpy_problem.param_dict["alpha"].value = alpha
+    cvxpy_problem.param_dict["beta"].value = beta
+    result = cvxpy_problem.solve(
+        solver=cp.SCS,
+        verbose=is_cvxpy_verbose,
+        requires_grad=True,
+        mkl=True,
+        max_iters=int(5e5),
+        # eps_rel=1e-4,
+        acceleration_lookback=10,
+        warm_start=True,
+        # canon_backend=cp.SCIPY_CANON_BACKEND,
+        time_limit_secs=180,
+    )
+    prob = cvxpy_problem
+    PI_list = cvxpy_problem.variables()
 
-    # Conditional probability with respect to the measurement operator
-    # prior_prob[i] is divided on both sides
-    for i in range(n):
-        constraints.append(
-            cp.real(cp.trace(cp.matmul(problem_spec.states[i].data, PI_list[i])))
-            >= cp.real(
-                cp.sum(
-                    [
-                        cp.trace(cp.matmul(problem_spec.states[i].data, PI_list[j]))
-                        for j in range(n)
-                    ]
-                )
-            )
-            * (1 - alpha[i])
-        )
-
-    # Conditional probability with respect to the input state
-    for i in range(n):
-        constraints.append(
-            cp.real(
-                prior_prob[i]
-                * cp.trace(cp.matmul(problem_spec.states[i].data, PI_list[i]))
-            )
-            >= cp.real(
-                cp.sum(
-                    [
-                        prior_prob[j]
-                        * cp.trace(cp.matmul(problem_spec.states[j].data, PI_list[i]))
-                        for j in range(n)
-                    ]
-                )
-            )
-            * (1 - beta[i])
-        )
-
-    constraints.append(cp.sum(PI_list) == I)
-
-    prob = cp.Problem(objective, constraints)
-    result = prob.solve(solver=cp.SCS, eps=1e-7, acceleration_lookback=10)
+    # TODO grab PI_list for postprocessing
     print("Result =", result)
     print(f"CVXPY returns {prob.status}")
     logger.info(f"CVXPY returns {prob.status}")
@@ -936,8 +900,8 @@ def apply_crossQD(
 
     strings_used = 0
     for i in range(n + 1):
-        print(f"Solution for PI_{i} =")
-        print(PI_list[i].value)
+        # print(f"Solution for PI_{i} =")
+        # print(PI_list[i].value)
         u, s, v = np.linalg.svd(PI_list[i].value, hermitian=True)
         for j in range(len(s)):
             # Don't add if s[j] too small
@@ -1012,6 +976,28 @@ def apply_crossQD(
     print(f"Inconclusive probability = {p_inc:.4f}")
     # TODO also return these values
     print()
+    # save_prob_heatmap(
+    #     prior_prob,
+    #     povm,
+    #     problem_spec.states,
+    #     bitstring_to_target_state,
+    #     strings_used,
+    #     tag=rf"{n}_crossQD_$\alpha${alpha[0]:2f}_$\beta${beta[0]:2f}_l{noise_level:2f}",
+    #     reuse_fig=reuse_fig,
+    # )
+
+    result_dict = defaultdict()
+    result_dict["povm"] = povm
+    result_dict["total_prob"] = total
+    # result_dict["p_succ"] = p_succ
+    # result_dict["p_err"] = p_err
+    result_dict["p_inc"] = p_inc
+    result_dict["PI_list"] = [PI_list[i].value for i in range(len(PI_list))]
+    result_dict["bitstring_to_target_state"] = bitstring_to_target_state
+    result_dict["strings_used"] = strings_used
+
+    return result_dict
+
 
 def gen_crossQD_dpp_problem(
     problem_spec: ProblemSpec,
