@@ -947,6 +947,7 @@ def apply_crossQD(
     total = 0
     p_d = 0
     p_inc = 0
+    povm = vectors_to_povm(povm)
     for i in range(n):
         probs = compute_event_probabilities(
             prior_prob[i], povm, problem_spec.states[i].data
