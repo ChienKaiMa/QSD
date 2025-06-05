@@ -9,7 +9,7 @@ from qiskit.quantum_info import Statevector, DensityMatrix
 import numpy as np
 
 
-def sv_simple_1(theta = np.pi / 4):
+def sv_simple_1(theta=np.pi / 4):
     """Two quantum states with a pre-specified absolute value of
     inner product."""
 
@@ -38,6 +38,20 @@ def sv_sic_symm_small():
         Statevector(sic_states_psi[0]),
         Statevector(sic_states_psi[4]),
         Statevector(sic_states_psi[8]),
+    ]
+    return {"num_qubits": 2, "num_states": 3, "states": sic_states}
+
+
+def sv_sic_asymm_small():
+    """Return statevectors derived from SIC POVM.
+    The states are symmetric in some ways, and
+    the number of qubits is small.
+    """
+    sic_states_psi = generate_sic_states(fiducial_states[4], 4)
+    sic_states = [
+        Statevector(sic_states_psi[0]),
+        Statevector(sic_states_psi[1]),
+        Statevector(sic_states_psi[2]),
     ]
     return {"num_qubits": 2, "num_states": 3, "states": sic_states}
 
