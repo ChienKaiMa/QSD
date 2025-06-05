@@ -110,6 +110,26 @@ class POVMCircuit:
         else:
             qc_iso = qclib.isometry.decompose(isometry, scheme=scheme)
 
+        # Select the one with the fewest estimated CNOTs
+        # TODO estimation time
+        est_ccd_cnot_counts = qclib.isometry.cnot_count(
+            isometry, "ccd", method="estimate"
+        )
+        est_csd_cnot_counts = qclib.isometry.cnot_count(
+            isometry, "csd", method="estimate"
+        )
+        est_knill_cnot_counts = qclib.isometry.cnot_count(
+            isometry, "knill", method="estimate"
+        )
+        logger.info(
+            f"{est_ccd_cnot_counts}, {est_csd_cnot_counts}, {est_knill_cnot_counts}"
+        )
+
+        # exact_ccd_cnot_counts = qclib.isometry.cnot_count(isometry, "ccd", method="")
+        # exact_csd_cnot_counts = qclib.isometry.cnot_count(isometry, "csd", method="")
+        # exact_knill_cnot_counts = qclib.isometry.cnot_count(isometry, "knill", method="")
+        # logger.info(f"{exact_ccd_cnot_counts}, {exact_csd_cnot_counts}, {exact_knill_cnot_counts}")
+
         # Trying approximate compiling
         self.approx(logger, qc_iso)
 
