@@ -55,6 +55,30 @@ def sv_sic_asymm_small():
     ]
     return {"num_qubits": 2, "num_states": 3, "states": sic_states}
 
+def sv_coh_asymm_small(num_qubits: int = 3):
+    assert num_qubits > 0
+    angles = [0, np.pi / 3, 2 * np.pi / 3]
+    alphas = [np.exp(angles[i] * 1j) for i in range(len(angles))]
+
+    symm_states_1 = [
+        coherent(N=2**num_qubits, alpha=1 * alphas[i])
+        for i in range(len(alphas))
+    ]
+    symm_states_1_dm = [
+        coherent_dm(N=2**num_qubits, alpha=1 * alphas[i])
+        for i in range(len(alphas))
+    ]
+    symm_states_matrix_1 = [
+        symm_states_1[i].data.to_array().flatten()
+        for i in range(len(symm_states_1))
+    ]
+    symm_states_1_dm_matrix = [
+        symm_states_1_dm[i].data.to_array()
+        for i in range(len(symm_states_1_dm))
+    ]
+
+    return symm_states_matrix_1, symm_states_1_dm
+
 
 def sv_coh_symm_small(num_qubits: int = 3):
     assert num_qubits > 0
