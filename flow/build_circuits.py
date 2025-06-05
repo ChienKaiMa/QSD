@@ -4,6 +4,7 @@ sys.path.append("../")
 sys.path.append("./")
 from flow.problem_spec import *
 from temp.get_random_seeds import *
+from argparse import ArgumentParser
 
 import time
 import tracemalloc
@@ -221,11 +222,16 @@ def _prepare(__name__):
     parser.add_argument("-q", "--nqubits", default=2)
     parser.add_argument("-n", "--nstates", default=3)
     parser.add_argument("-s", "--seed", default=42)
+    parser.add_argument("-t", "--tag", default="ideal")
     args = parser.parse_args()
     nq = int(args.nqubits)
     ns = int(args.nstates)
     seed = int(args.seed)
-    case_id = f"q{nq}_n{ns}_s{seed}"
+    tag = args.tag
+    if tag:
+        case_id = f"q{nq}_n{ns}_s{seed}_{tag}"
+    else:
+        case_id = f"q{nq}_n{ns}_s{seed}"
 
     logging.basicConfig(
         filename=f"build_circuits_{case_id}.log",
@@ -239,11 +245,11 @@ def _prepare(__name__):
     logger = logging.getLogger(__name__)
     logger.info(f"Start build_circuits.py")
     logger.info(f"nq = {nq}, ns = {ns}, seed = {seed}")
-    return nq, ns, seed, case_id, logger
+    return nq, ns, seed, tag, case_id, logger
 
 
 if __name__ == "__main__":
-    nq, ns, seed, case_id, logger = _prepare(__name__)
+    nq, ns, seed, tag, case_id, logger = _prepare(__name__)
 
     tracemalloc.start()
     obj = POVMCircuit.load(nq, ns, seed, case_id)
