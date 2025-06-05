@@ -409,7 +409,9 @@ def apply_koova_mix_primal(
         cp.sum(
             [
                 prior_prob[i]
-                * cp.real(cp.trace(cp.matmul(problem_spec.states[i].data, PI_list[i])))
+                * cp.real(
+                    cp.trace(cp.matmul(problem_spec.states[i].data, PI_list[i]))
+                )
                 for i in range(n)
             ]
         )
@@ -427,7 +429,9 @@ def apply_koova_mix_primal(
                 cp.sum(
                     [
                         prior_prob[i]
-                        * cp.trace(cp.matmul(problem_spec.states[i].data, PI_list[j]))
+                        * cp.trace(
+                            cp.matmul(problem_spec.states[i].data, PI_list[j])
+                        )
                         for j in range(n)
                         if i != j
                     ]
@@ -496,7 +500,9 @@ def apply_koova_mix_primal(
     return
 
 
-def apply_dawei_mix_primal(problem_spec: ProblemSpec, prior_prob=None, gamma=None):
+def apply_dawei_mix_primal(
+    problem_spec: ProblemSpec, prior_prob=None, gamma=None
+):
     """Apply Da-wei's formulation.
     gamma: Threshold probabilities. List of [0, 1)
     """
@@ -526,7 +532,9 @@ def apply_dawei_mix_primal(problem_spec: ProblemSpec, prior_prob=None, gamma=Non
         cp.sum(
             [
                 prior_prob[i]
-                * cp.real(cp.trace(cp.matmul(problem_spec.states[i].data, PI_list[i])))
+                * cp.real(
+                    cp.trace(cp.matmul(problem_spec.states[i].data, PI_list[i]))
+                )
                 for i in range(n)
             ]
         )
@@ -548,7 +556,9 @@ def apply_dawei_mix_primal(problem_spec: ProblemSpec, prior_prob=None, gamma=Non
                 cp.sum(
                     [
                         prior_prob[i]
-                        * cp.trace(cp.matmul(problem_spec.states[i].data, PI_list[j]))
+                        * cp.trace(
+                            cp.matmul(problem_spec.states[i].data, PI_list[j])
+                        )
                         for j in range(n)
                     ]
                 )
@@ -594,8 +604,11 @@ def apply_dawei_mix_primal(problem_spec: ProblemSpec, prior_prob=None, gamma=Non
     total = 0
     p_d = 0
     inc_prob = 0
+    povm = vectors_to_povm(povm)
     for i in range(n):
-        probs = compute_event_probabilities(povm, problem_spec.states[i].data)
+        probs = compute_event_probabilities(
+            prior_prob, povm, problem_spec.states[i].data
+        )
         print(probs)
         total += prior_prob[i] * sum(probs)
         p_d += prior_prob[i] * probs[i]
@@ -605,7 +618,11 @@ def apply_dawei_mix_primal(problem_spec: ProblemSpec, prior_prob=None, gamma=Non
     print("Inconclusive probability =", inc_prob)
     print()
     save_prob_heatmap(
-        prior_prob, povm, problem_spec.states, tag=f"{n}_dawei_{gamma[0]:2f}"
+        prior_prob,
+        povm,
+        problem_spec.states,
+        # bitstring_to_target_state=bistrit
+        tag=f"{n}_dawei_{gamma[0]:2f}",
     )
 
     # TODO
@@ -639,7 +656,10 @@ def apply_dawei_mix(problem_spec: ProblemSpec, prior_prob=None, gamma=None):
 
     # TODO [Priority: Low] add assertions
     Delta = np.sum(
-        [np.multiply(prior_prob[i], problem_spec.states[i].data) for i in range(n)]
+        [
+            np.multiply(prior_prob[i], problem_spec.states[i].data)
+            for i in range(n)
+        ]
     )
 
     # Matrix inequality uses >>
@@ -651,7 +671,8 @@ def apply_dawei_mix(problem_spec: ProblemSpec, prior_prob=None, gamma=None):
             - cp.sum(
                 [
                     cp.multiply(
-                        delta_arr[j] * prior_prob[j], problem_spec.states[j].data
+                        delta_arr[j] * prior_prob[j],
+                        problem_spec.states[j].data,
                     )
                     for j in range(n)
                     if i != j
@@ -971,7 +992,9 @@ def apply_crossQD(
 
     probability_matrix = []
     for i in range(n):
-        probs = compute_event_probabilities(prior_prob[i], povm, problem_spec.states[i])
+        probs = compute_event_probabilities(
+            prior_prob[i], povm, problem_spec.states[i].data
+        )
         updated_probs = [0] * (len(prior_prob) + 1)
         for j in range(strings_used):
             target_state_index = bitstring_to_target_state[j]
