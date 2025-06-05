@@ -64,7 +64,7 @@ def sv_coh_symm_small(num_qubits: int = 3):
         for i in range(len(symm_states_1_dm))
     ]
 
-    return symm_states_matrix_1
+    return symm_states_matrix_1, symm_states_1_dm
 
 
 def dm_coh_symm_small(num_qubits=3):
