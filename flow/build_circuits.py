@@ -84,8 +84,8 @@ class POVMCircuit:
         logger = logging.getLogger(__name__)
 
         isometry = self.naimark(self.povm_vectors)
-        np.save(f"iso_{case_id}.npy", isometry)
-        logger.info(f"The isometry is saved to iso_{case_id}.npy")
+        np.save(f"iso_{self.case_id}.npy", isometry)
+        logger.info(f"The isometry is saved to iso_{self.case_id}.npy")
 
         # 2024/10/30
         # csd works, while ccd doesn't
