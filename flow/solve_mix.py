@@ -952,7 +952,7 @@ def apply_crossQD(
         probs = compute_event_probabilities(
             prior_prob[i], povm, problem_spec.states[i].data
         )
-        print(probs)
+        # print(probs)
         total += sum(probs)
 
     probability_matrix = []
@@ -967,6 +967,8 @@ def apply_crossQD(
         # TODO
         # Postprocessing
         probability_matrix.append(updated_probs)
+    
+    print(probability_matrix)
 
     for i in range(n):
         p_d += probability_matrix[i][i]
