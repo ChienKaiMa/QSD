@@ -45,18 +45,18 @@ def sv_sic_symm_small():
 def sv_simple_2(a=1 / 10, b=1 / 6, c=1 / 5):
     num_qubits = 2
     num_states = 3
-    z00 = [1, 0, 0, 0]
-    z01 = [0, 1, 0, 0]
-    z10 = [0, 0, 1, 0]
-    z11 = [0, 0, 0, 1]
+    z00 = np.array([1, 0, 0, 0])
+    z01 = np.array([0, 1, 0, 0])
+    z10 = np.array([0, 0, 1, 0])
+    z11 = np.array([0, 0, 0, 1])
 
     def normalize(v):
         return np.array(v) / np.linalg.norm(v)
 
     states = [
-        Statevector(normalize(z00 + a * z11)),
-        Statevector(normalize(z01 + b * z11)),
-        Statevector(normalize(z10 + c * z11)),
+        Statevector(normalize(z00 + np.multiply(a, z11))),
+        Statevector(normalize(z01 + np.multiply(b, z11))),
+        Statevector(normalize(z10 + np.multiply(c, z11))),
     ]
     return {"num_qubits": 2, "num_states": 3, "states": states}
 
@@ -73,6 +73,7 @@ def sv_sic_asymm_small():
         Statevector(sic_states_psi[2]),
     ]
     return {"num_qubits": 2, "num_states": 3, "states": sic_states}
+
 
 def sv_coh_asymm_small(num_qubits: int = 3):
     assert num_qubits > 0
