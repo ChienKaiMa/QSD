@@ -966,7 +966,7 @@ def apply_crossQD(
             updated_probs[target_state_index] += probs[j]
         # TODO
         # Postprocessing
-        print(update_probs)
+        print(updated_probs)
         probability_matrix.append(updated_probs)
 
     for i in range(n):
