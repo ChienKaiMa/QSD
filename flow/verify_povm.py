@@ -22,9 +22,9 @@ def verify_povm_matrix(povm, rtol=1e-4):
     for i in range(len(povm)):
         # May return False is you use rtol here.
         # I haven't figured out why.
-        print(type(povm[i]))
-        print("shape =", np.shape(povm[i]))
-        print(povm[i])
+        # print(type(povm[i]))
+        # print("shape =", np.shape(povm[i]))
+        # print(povm[i])
         if not ishermitian(povm[i], atol=1e-10):
             print(f"{i} is not Hermitian")
             return False
