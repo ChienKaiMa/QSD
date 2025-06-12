@@ -261,8 +261,8 @@ def apply_Eldar_mix_primal(
         verbose=is_cvxpy_verbose,
         acceleration_lookback=10,
     )
-    print("Result =", result)
-    print(f"CVXPY returns {prob.status}")
+    # print("Result =", result)
+    # print(f"CVXPY returns {prob.status}")
     logger.info(f"CVXPY returns {prob.status}")
     if prob.status != "optimal":
         logger.error(f"CVXPY returns {prob.status}")
@@ -289,10 +289,10 @@ def apply_Eldar_mix_primal(
                 strings_used += 1
 
     problem_spec.bitstring_to_target_state = bitstring_to_target_state.copy()
-    print("bitstring_to_target_state")
-    print(bitstring_to_target_state)
-    print("strings_used")
-    print(strings_used)
+    ## print("bitstring_to_target_state")
+    ## print(bitstring_to_target_state)
+    ## print("strings_used")
+    ## print(strings_used)
     # TODO save strings_used somewhere
     #
 
@@ -320,7 +320,7 @@ def apply_Eldar_mix_primal(
     # TODO
     # Verify solution
     np.set_printoptions(precision=4)
-    print("Probabilities for each state:")
+    # print("Probabilities for each state:")
     total = 0
     p_d = 0
     p_inc = 0
@@ -329,7 +329,7 @@ def apply_Eldar_mix_primal(
         probs = compute_event_probabilities(
             prior_prob[i], povm, problem_spec.states[i].data
         )
-        print(probs)
+        # print(probs)
         total += sum(probs)
 
     probability_matrix = []
@@ -349,11 +349,11 @@ def apply_Eldar_mix_primal(
         p_d += probability_matrix[i][i]
         p_inc += probability_matrix[i][n]
 
-    print(f"Total probability = {total:.4f}")
-    print(f"Success probability = {p_d:.4f}")
-    print(f"Inconclusive probability = {p_inc:.4f}")
-    # TODO also return these values
-    print()
+    ## print(f"Total probability = {total:.4f}")
+    ## print(f"Success probability = {p_d:.4f}")
+    ## print(f"Inconclusive probability = {p_inc:.4f}")
+    ## # TODO also return these values
+    ## print()
     # save_prob_heatmap(
     #     prior_prob,
     #     povm,
