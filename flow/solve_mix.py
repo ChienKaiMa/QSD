@@ -837,6 +837,9 @@ def apply_crossQD(
     noise_level=0,
     reuse_fig=None,
     is_cvxpy_verbose=False,
+    max_iters=int(5e5),
+    eps_abs=1e-7,
+    eps_rel=1e-7,
 ):
     """Apply the cross quantum discrimination method.
     beta: Threshold probabilities. List of [0, 1)
@@ -873,12 +876,13 @@ def apply_crossQD(
         verbose=is_cvxpy_verbose,
         requires_grad=True,
         mkl=True,
-        max_iters=int(5e5),
-        # eps_rel=1e-4,
+        max_iters=int(max_iters),
+        eps_abs=eps_abs,
+        eps_rel=eps_rel,
         acceleration_lookback=10,
         warm_start=True,
         # canon_backend=cp.SCIPY_CANON_BACKEND,
-        time_limit_secs=180,
+        # time_limit_secs=180,
     )
     prob = cvxpy_problem
     PI_list = cvxpy_problem.variables()
