@@ -1356,8 +1356,8 @@ def apply_crossQD_2(
     PI_list = cvxpy_problem.variables()
 
     # TODO grab PI_list for postprocessing
-    print("Result =", result)
-    print(f"CVXPY returns {prob.status}")
+    # print("Result =", result)
+    # print(f"CVXPY returns {prob.status}")
     logger.info(f"CVXPY returns {prob.status}")
     if prob.status != "optimal" and prob.status != "optimal_inaccurate":
         logger.error(f"CVXPY returns {prob.status}")
@@ -1415,7 +1415,7 @@ def apply_crossQD_2(
     # TODO
     # Verify solution
     np.set_printoptions(precision=4)
-    print("Probabilities for each state:")
+    # print("Probabilities for each state:")
     total = 0
     p_d = 0
     p_inc = 0
@@ -1438,18 +1438,18 @@ def apply_crossQD_2(
             updated_probs[target_state_index] += probs[j]
         # TODO
         # Postprocessing
-        print(updated_probs)
+        # print(updated_probs)
         probability_matrix.append(updated_probs)
 
     for i in range(n):
         p_d += probability_matrix[i][i]
         p_inc += probability_matrix[i][n]
 
-    print(f"Total probability = {total:.4f}")
-    print(f"Success probability = {p_d:.4f}")
-    print(f"Inconclusive probability = {p_inc:.4f}")
-    # TODO also return these values
-    print()
+    # print(f"Total probability = {total:.4f}")
+    # print(f"Success probability = {p_d:.4f}")
+    # print(f"Inconclusive probability = {p_inc:.4f}")
+    # # TODO also return these values
+    # print()
     # save_prob_heatmap(
     #     prior_prob,
     #     povm,
