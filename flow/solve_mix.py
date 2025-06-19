@@ -1742,7 +1742,7 @@ def gen_crossQD_3_dpp_problem(
             ]
         )
         constraints.append(
-            ideal_dist[i] >= cp.real(expr_rhs)
+            ideal_distrib[i] >= cp.real(expr_rhs)
         )
 
     # Constraint 3. Completeness
