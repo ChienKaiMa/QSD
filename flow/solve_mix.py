@@ -1540,10 +1540,9 @@ def gen_crossQD_2_dpp_problem(
 
 
 def apply_crossQD_3(
+    ideal_distrib,
     problem_spec: ProblemSpec,
     prior_prob=None,
-    alpha=None,
-    beta=None,
     gamma=None,
     noise_level=0,
     reuse_fig=None,
@@ -1567,26 +1566,17 @@ def apply_crossQD_3(
     else:
         logger.info(f"The prior probabilities is set to {prior_prob}")
 
-    if alpha is None or len(alpha) != n:
-        alpha = [0.01] * n
-    logger.info(f"The threshold probabilities (alpha) are set to {alpha}")
-
-    if beta is None or len(beta) != n:
-        beta = [0.01] * n
-    logger.info(f"The threshold probabilities (beta) are set to {beta}")
-
     # TODO isnum(gamma)
     if gamma is None:
         gamma = 0
     logger.info(f"The inconclusive lower bound (gamma) is set to {gamma}")
 
     cvxpy_problem = gen_crossQD_3_dpp_problem(
+        ideal_distrib=ideal_distrib,
         problem_spec=problem_spec,
         prior_prob=prior_prob,
     )
 
-    cvxpy_problem.param_dict["alpha"].value = alpha
-    cvxpy_problem.param_dict["beta"].value = beta
     cvxpy_problem.param_dict["gamma"].value = gamma
     result = cvxpy_problem.solve(
         solver=cp.SCS,
@@ -1681,7 +1671,7 @@ def apply_crossQD_3(
 
 
 def gen_crossQD_3_dpp_problem(
-    ideal_dist,
+    ideal_distrib,
     problem_spec: ProblemSpec,
     prior_prob=None,
     noise_level=0,  # TODO
