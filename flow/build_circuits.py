@@ -20,9 +20,9 @@ from qiskit import transpile
 import qclib.isometry
 
 service = qiskit_ibm_runtime.QiskitRuntimeService(
-    channel='ibm_quantum',
-    instance='ibm-q-hub-ntu/jiang-jie-hong/default',
-    token="b49854f9530507490413d6c62e39bfe88adeb005bca7c3e363ef889fd44bb4e751dba1f9ba90d7dd5269e220c176e9d6f0d80fa5489945a2a5a19466ac51f543",
+    channel='ibm_cloud',
+    instance='<YOUR_INSTANCE>',
+    token="<YOUR_TOKEN>",
 )
 
 
