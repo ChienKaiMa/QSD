@@ -96,6 +96,7 @@ class ProblemSpec:
 
     def set_states(self, state_type, states=None, overwrite=False):
         logger = logging.getLogger(__name__)
+        assert state_type == "statevector" or state_type == "densitymatrix"
         if states is None:
             logger.info("No states are provided. The states will be generated.")
             self.states = self.gen_states(
