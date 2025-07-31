@@ -1779,7 +1779,7 @@ def apply_Eldar(
     # Default to uniform distribution
     n = problem_spec.num_states
     if prior_prob is None:
-        prior_prob = np.ones(n) * (-1 / n)
+        prior_prob = np.ones(n) * (1 / n)
         logger.info(f"The prior probabilities is set to uniform (n = {n})")
 
     # Equation (6): Reciprocal states
@@ -1797,7 +1797,7 @@ def apply_Eldar(
 
     # Equation (20) ~ (24): Semidefinite programming (SDP) formulation
     p = cp.Variable(n)
-    objective = cp.Minimize(1 + cp.sum(prior_prob @ p))
+    objective = cp.Minimize(1 - cp.sum(prior_prob @ p))
 
     constraints = []
     # TODO min_prob is a list of different numbers
@@ -1832,7 +1832,7 @@ def apply_Eldar(
     logger.info(f"Solution (rounded) = {sol.round(4)}")
     p_succ = 0
     for i in range(n):
-        p_succ += -prior_prob[i] * sol[i]
+        p_succ += prior_prob[i] * sol[i]
 
     # Obtain POVMs
     povm = []
@@ -1851,7 +1851,7 @@ def apply_Eldar(
     povm.append(expr.value)
     distrib = []
     for i in range(n):
-        distrib.append(-sol[i] * prior_prob[i])
+        distrib.append(sol[i] * prior_prob[i])
     distrib.append(1 - p_succ)
     # TODO Remember the remaining operators
     result_dict = defaultdict(int)
