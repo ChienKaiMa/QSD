@@ -19,7 +19,7 @@ class ProblemSpec:
         num_states: int,
         seed: int | np.random.Generator | None = 42,
         case_id: str = "",
-        prior_prob: list[int] | None = None,
+        prior_prob: list[float] | None = None,
         state_type="statevector",
     ):
         logger = logging.getLogger(__name__)
