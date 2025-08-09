@@ -1991,6 +1991,165 @@ def med_plus_problem(
     return cp.Problem(objective, constraints)
 
 
+def min_l1_problem(
+    ideal_distrib,
+    qsd_problem: ProblemSpec,
+    prior_prob: list[float] | None = None,
+):
+    assert qsd_problem.state_type == "densitymatrix"
+    logger = logging.getLogger(__name__)
+
+    k = qsd_problem.num_states
+
+    # PI is the variable for the POVM elements we try to solve for.
+    PI_list = [
+        cp.Variable(
+            shape=(qsd_problem.num_amps, qsd_problem.num_amps),
+            hermitian=True,
+            name=f"PI_{i}",
+        )
+        for i in range(k + 1)
+    ]
+
+    if prior_prob is None:
+        prior_prob = np.ones(k) * (1 / k)
+        logger.info(f"The prior probabilities is set to uniform (k = {k})")
+    else:
+        logger.info(f"The prior probabilities is set to {prior_prob}")
+
+    l1_expr = 0
+    for i in range(k):
+        ideal_row = ideal_distrib[i]
+        for j in range(k + 1):
+            expr_rhs = prior_prob[i] * cp.trace(
+                cp.matmul(qsd_problem.states[i].data, PI_list[j])
+            )
+            l1_expr += cp.abs(ideal_row[j] - cp.real(expr_rhs))
+    objective = cp.Minimize(l1_expr)
+
+    constraints = []
+
+    # Constraint 1. Positive operators
+    for i in range(k + 1):
+        constraints.append(PI_list[i] >> 0)
+
+    # Constraint 2. Completeness
+    I = np.identity(qsd_problem.num_amps)
+    constraints.append(cp.sum(PI_list) == I)
+
+    return cp.Problem(objective, constraints)
+
+
+def min_l2_problem(
+    ideal_distrib,
+    qsd_problem: ProblemSpec,
+    prior_prob: list[float] | None = None,
+):
+    assert qsd_problem.state_type == "densitymatrix"
+    logger = logging.getLogger(__name__)
+
+    k = qsd_problem.num_states
+
+    # PI is the variable for the POVM elements we try to solve for.
+    PI_list = [
+        cp.Variable(
+            shape=(qsd_problem.num_amps, qsd_problem.num_amps),
+            hermitian=True,
+            name=f"PI_{i}",
+        )
+        for i in range(k + 1)
+    ]
+
+    if prior_prob is None:
+        prior_prob = np.ones(k) * (1 / k)
+        logger.info(f"The prior probabilities is set to uniform (k = {k})")
+    else:
+        logger.info(f"The prior probabilities is set to {prior_prob}")
+
+    l2_expr = 0
+    for i in range(k):
+        ideal_row = ideal_distrib[i]
+        for j in range(k + 1):
+            expr_rhs = prior_prob[i] * cp.trace(
+                cp.matmul(qsd_problem.states[i].data, PI_list[j])
+            )
+            l2_expr += cp.abs(ideal_row[j] - cp.real(expr_rhs))
+    objective = cp.Minimize(l2_expr)
+
+    constraints = []
+
+    # Constraint 1. Positive operators
+    for i in range(k + 1):
+        constraints.append(PI_list[i] >> 0)
+
+    # Constraint 2. Completeness
+    I = np.identity(qsd_problem.num_amps)
+    constraints.append(cp.sum(PI_list) == I)
+
+    return cp.Problem(objective, constraints)
+
+
+def max_psucc_min_diff_problem(
+    ideal_distrib,
+    qsd_problem: ProblemSpec,
+    prior_prob: list[float] | None = None,
+):
+    assert qsd_problem.state_type == "densitymatrix"
+    logger = logging.getLogger(__name__)
+
+    k = qsd_problem.num_states
+
+    # PI is the variable for the POVM elements we try to solve for.
+    PI_list = [
+        cp.Variable(
+            shape=(qsd_problem.num_amps, qsd_problem.num_amps),
+            hermitian=True,
+            name=f"PI_{i}",
+        )
+        for i in range(k + 1)
+    ]
+
+    if prior_prob is None:
+        prior_prob = np.ones(k) * (1 / k)
+        logger.info(f"The prior probabilities is set to uniform (k = {k})")
+    else:
+        logger.info(f"The prior probabilities is set to {prior_prob}")
+
+    prob_succ_expr = get_prob_succ_expr(
+        problem_spec=qsd_problem, prior_prob=prior_prob, PI_list=PI_list
+    )
+
+    objective = cp.Maximize(prob_succ_expr)
+
+    constraints = []
+
+    # Constraint 1. Positive operators
+    for i in range(k + 1):
+        constraints.append(PI_list[i] >> 0)
+
+    # Constraint 2. Completeness
+    I = np.identity(qsd_problem.num_amps)
+    constraints.append(cp.sum(PI_list) == I)
+
+    # Constraint 3. Match the ideal distribution
+    for i in range(k):
+        ideal_row = ideal_distrib[i]
+        for j in range(k):
+            expr_rhs = prior_prob[i] * cp.trace(
+                cp.matmul(qsd_problem.states[i].data, PI_list[j])
+            )
+            if i == j:
+                constraints.append(ideal_row[j] >= cp.real(expr_rhs))
+            else:
+                constraints.append(ideal_row[j] <= cp.real(expr_rhs))
+        expr_rhs = prior_prob[i] * cp.trace(
+            cp.matmul(qsd_problem.states[i].data, PI_list[k])
+        )
+        constraints.append(ideal_row[k] <= cp.real(expr_rhs))
+
+    return cp.Problem(objective, constraints)
+
+
 def solveQSDProblem(
     cvxpy_qsd_problem: cp.Problem,
     cvxpy_settings: dict,
