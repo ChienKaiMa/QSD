@@ -2078,7 +2078,7 @@ def min_l2_problem(
             expr_rhs = prior_prob[i] * cp.trace(
                 cp.matmul(qsd_problem.states[i].data, PI_list[j])
             )
-            l2_expr += cp.abs(ideal_row[j] - cp.real(expr_rhs))
+            l2_expr += ((ideal_row[j] - cp.real(expr_rhs)) ** 2)
     objective = cp.Minimize(l2_expr)
 
     constraints = []
