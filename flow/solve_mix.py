@@ -1767,6 +1767,7 @@ def apply_Eldar(
     prior_prob=None,
     min_prob=0,
     is_cvxpy_verbose=False,
+    cvxpy_settings=None,
 ):
     """Apply the method in Eldar's paper in 2003."""
     assert problem_spec.state_type == "statevector"
@@ -1781,6 +1782,13 @@ def apply_Eldar(
     if prior_prob is None:
         prior_prob = np.ones(n) * (1 / n)
         logger.info(f"The prior probabilities is set to uniform (n = {n})")
+
+    if cvxpy_settings is None:
+        cvxpy_settings = {
+            "solver": cp.SCS,
+            "verbose": is_cvxpy_verbose,
+            "acceleration_lookback": 10,
+        }
 
     # Equation (6): Reciprocal states
     Phi_tilde = get_Phi_tilde(problem_spec)
@@ -1813,12 +1821,9 @@ def apply_Eldar(
     constraints.append(expr >> 0)  # Matrix inequality in CVXPY uses >>
 
     prob = cp.Problem(objective, constraints)
-    # TODO logger.info(f"CVXPY settings {}")
+    logger.info(f"CVXPY settings {cvxpy_settings}")
     t1 = time.time()
-    # result = prob.solve(solver=cp.SCS, eps=1e-20)
-    result = prob.solve(
-        solver=cp.SCS, verbose=is_cvxpy_verbose, acceleration_lookback=10
-    )  # , eps=1e-20)
+    result = prob.solve(**cvxpy_settings)
     # result = prob.solve(solver=cp.CPLEX, verbose=is_cvxpy_verbose, eps=1e-20)
     t2 = time.time()
     solver_time_str = np.format_float_scientific(t2 - t1, precision=4)
