@@ -2045,11 +2045,13 @@ def min_l1_problem(
     return cp.Problem(objective, constraints)
 
 
-def min_l2_problem(
+def min_ss_problem(
     ideal_distrib,
     qsd_problem: ProblemSpec,
     prior_prob: list[float] | None = None,
 ):
+    """SS stands for 'sum of squares'.
+    """
     assert qsd_problem.state_type == "densitymatrix"
     logger = logging.getLogger(__name__)
 
@@ -2071,15 +2073,15 @@ def min_l2_problem(
     else:
         logger.info(f"The prior probabilities is set to {prior_prob}")
 
-    l2_expr = 0
+    ss_expr = 0
     for i in range(k):
         ideal_row = ideal_distrib[i]
         for j in range(k + 1):
             expr_rhs = prior_prob[i] * cp.trace(
                 cp.matmul(qsd_problem.states[i].data, PI_list[j])
             )
-            l2_expr += ((ideal_row[j] - cp.real(expr_rhs)) ** 2)
-    objective = cp.Minimize(l2_expr)
+            ss_expr += ((ideal_row[j] - cp.real(expr_rhs)) ** 2)
+    objective = cp.Minimize(ss_expr)
 
     constraints = []
 
