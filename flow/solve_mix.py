@@ -1890,6 +1890,27 @@ def get_prob_succ_expr(
     )
 
 
+def get_l1_dist_expr(
+    problem_spec: ProblemSpec,
+    prior_prob: list[float],
+    PI_list: list[cp.Variable],
+    prob_mat: list[float],
+):
+    """Returns a CVXPY expression for the L1 distance between two flattened
+    probability matrices.
+    """
+    k = problem_spec.num_states
+    l1_expr = 0
+    for i in range(k):
+        ideal_row = prob_mat[i]
+        for j in range(k + 1):
+            expr_rhs = prior_prob[i] * cp.trace(
+                cp.matmul(problem_spec.states[i].data, PI_list[j])
+            )
+            l1_expr += cp.abs(ideal_row[j] - cp.real(expr_rhs))
+    return l1_expr
+
+
 def med_problem(
     problem_spec: ProblemSpec,
     prior_prob: list[float] | None = None,
