@@ -2017,6 +2017,67 @@ def med_plus_problem(
     return cp.Problem(objective, constraints)
 
 
+def frio_problem(
+    problem_spec: ProblemSpec,
+    p_inc_lb: float,
+    prior_prob: list[float] | None = None,
+):
+    """Apply the method in Eldar's paper in 2004 with the primal problem."""
+
+    assert problem_spec.state_type == "densitymatrix"
+    logger = logging.getLogger(__name__)
+
+    assert 0 <= p_inc_lb < 1
+
+    k = problem_spec.num_states
+
+    # PI is the variable for the POVM elements we try to solve for.
+    PI_list = [
+        cp.Variable(
+            shape=(problem_spec.num_amps, problem_spec.num_amps),
+            hermitian=True,
+            name=f"PI_{i}",
+        )
+        for i in range(k + 1)
+    ]
+
+    if prior_prob is None:
+        prior_prob = np.ones(k) * (1 / k)
+        logger.info(f"The prior probabilities is set to uniform (k = {k})")
+    else:
+        logger.info(f"The prior probabilities is set to {prior_prob}")
+
+    prob_succ_expr = get_prob_succ_expr(
+        problem_spec=problem_spec, prior_prob=prior_prob, PI_list=PI_list
+    )
+
+    objective = cp.Maximize(prob_succ_expr)
+
+    constraints = []
+
+    # Constraint 1. Positive operators
+    for i in range(k + 1):
+        constraints.append(PI_list[i] >> 0)
+
+    # Constraint 2. Completeness
+    I = np.identity(problem_spec.num_amps)
+    constraints.append(cp.sum(PI_list) == I)
+
+    # Constraint 3.
+    expr_rhs = cp.real(
+        cp.sum(
+            [
+                prior_prob[j]
+                * cp.trace(cp.matmul(problem_spec.states[j].data, PI_list[k]))
+                for j in range(k)
+            ]
+        )
+    )
+    constraints.append(expr_rhs >= p_inc_lb)
+
+    return cp.Problem(objective, constraints)
+
+
 def min_l1_problem(
     ideal_distrib,
     qsd_problem: ProblemSpec,
