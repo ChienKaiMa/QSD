@@ -1,4 +1,22 @@
+import math
 import numpy as np
+
+
+def entropy(probs):
+    return -sum(p * math.log2(p) if p > 0 else 0 for p in probs)
+
+
+def mutual_information(prob_mat, prior_prob, k):
+    # prob_mat: k x (k+1) joint probabilities p(Y=y_m, X=H_i), prior_prob: k-length array
+    prob_mat = np.array(prob_mat)
+    p_y = np.sum(prob_mat, axis=0)  # Marginal p(y_m), shape (k+1,)
+    H_Y = entropy(p_y)
+    H_Y_given_X = 0
+    for i in range(k):
+        if prior_prob[i] > 0:
+            cond_probs = prob_mat[i, :] / prior_prob[i]  # p(Y=y_m | X=H_i)
+            H_Y_given_X += prior_prob[i] * entropy(cond_probs)
+    return H_Y - H_Y_given_X
 
 
 def von_neumann_entropy(rho):
