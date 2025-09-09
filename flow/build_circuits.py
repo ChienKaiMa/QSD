@@ -222,11 +222,12 @@ class POVMCircuit:
 
     def naimark(self, basis):
         # TODO clean
+        dims = 2 ** len(basis).bit_length()
         V = sum(
             [
                 np.multiply(
                     # self.basis_extend(i, self.num_amps * 2), np.matrix.getH(basis[i])
-                    self.basis_extend(i, self.num_amps * 2),
+                    self.basis_extend(i, dims),
                     basis[i],
                 )
                 for i in range(len(basis))
