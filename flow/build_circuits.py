@@ -130,6 +130,7 @@ class POVMCircuit:
         # exact_knill_cnot_counts = qclib.isometry.cnot_count(isometry, "knill", method="")
         # logger.info(f"{exact_ccd_cnot_counts}, {exact_csd_cnot_counts}, {exact_knill_cnot_counts}")
 
+        qc_iso_pretranspile = qc_iso
         # Trying approximate compiling
         self.approx(logger, qc_iso)
 
@@ -140,7 +141,7 @@ class POVMCircuit:
         # Transpile with the backend
         self.transpile_with_backend(logger, qc_iso, service)
 
-        return
+        return qc_iso_pretranspile
 
     def transpile_wo_backend(self, logger, qc_iso):
         """Transpile without backend"""
