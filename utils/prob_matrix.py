@@ -10,6 +10,27 @@ def vectors_to_povm(povm_vectors: list) -> np.array:
     return np.array(povm)
 
 
+def povm_to_rank1_vectors(povm, threshold=1e-4):
+    """Decompose POVM elements to rank-1 vectors.
+    May require using the fix function later since the output may not be POVM.
+    threshold=0 means that every vector will be stored.
+    threshold=1e-4 should work in most cases.
+    Returns the vectors and the mapping.
+    """
+    povm_vectors = []
+    povm_map = dict()
+    idx = 0  # Index for the outcome
+    for i in range(len(povm)):
+        u, s, _ = np.linalg.svd(povm[i], hermitian=True)
+        for j in range(len(s)):
+            if s[j] >= threshold:
+                rank1_vec = u[:, j] * np.sqrt(s[j])
+                povm_vectors.append(rank1_vec.conj())
+                povm_map[idx] = i
+                idx += 1
+    return np.array(povm_vectors), povm_map
+
+
 def compute_event_probabilities(prior_prob, povm, state: np.array):
     """
     Compute the probabilities of all possible measured values based
