@@ -75,70 +75,44 @@ def sv_sic_asymm_small():
     return {"num_qubits": 2, "num_states": 3, "states": sic_states}
 
 
-def sv_coh_asymm_small(num_qubits: int = 3):
+def get_coherent_states(num_qubits, amps, angles):
+    alphas = [amps[i] * np.exp(angles[i] * 1j) for i in range(len(angles))]
+    qutip_state_vec = [
+        coherent(N=2**num_qubits, alpha=alphas[i])
+        for i in range(len(alphas))
+    ]
+    qutip_dense_mat = [
+        coherent_dm(N=2**num_qubits, alpha=alphas[i])
+        for i in range(len(alphas))
+    ]
+    numpy_state_vec = [
+        qutip_state_vec[i].data.to_array().flatten()
+        for i in range(len(qutip_state_vec))
+    ]
+    numpy_dense_mat = [
+        qutip_dense_mat[i].data.to_array() for i in range(len(qutip_dense_mat))
+    ]
+    return {
+        "num_qubits": num_qubits,
+        "num_states": len(alphas),
+        "state_vec": numpy_state_vec,
+        "dense_mat": numpy_dense_mat,
+        "qutip_dense_mat": qutip_dense_mat,  # For plotting and analysis
+    }
+
+
+def coh_asymm_small(num_qubits: int = 3):
     assert num_qubits > 0
+    amps = [1, 1, 1]
     angles = [0, np.pi / 3, 2 * np.pi / 3]
-    alphas = [np.exp(angles[i] * 1j) for i in range(len(angles))]
-
-    symm_states_1 = [
-        coherent(N=2**num_qubits, alpha=1 * alphas[i])
-        for i in range(len(alphas))
-    ]
-    symm_states_1_dm = [
-        coherent_dm(N=2**num_qubits, alpha=1 * alphas[i])
-        for i in range(len(alphas))
-    ]
-    symm_states_matrix_1 = [
-        symm_states_1[i].data.to_array().flatten()
-        for i in range(len(symm_states_1))
-    ]
-    symm_states_1_dm_matrix = [
-        symm_states_1_dm[i].data.to_array()
-        for i in range(len(symm_states_1_dm))
-    ]
-
-    return symm_states_matrix_1, symm_states_1_dm
+    return get_coherent_states(num_qubits, amps, angles)
 
 
-def sv_coh_symm_small(num_qubits: int = 3):
+def coh_symm_small(num_qubits: int = 3):
     assert num_qubits > 0
+    amps = [1, 1, 1]
     angles = [0, 2 * np.pi / 3, 4 * np.pi / 3]
-    alphas = [np.exp(angles[i] * 1j) for i in range(len(angles))]
-
-    symm_states_1 = [
-        coherent(N=2**num_qubits, alpha=1 * alphas[i])
-        for i in range(len(alphas))
-    ]
-    symm_states_1_dm = [
-        coherent_dm(N=2**num_qubits, alpha=1 * alphas[i])
-        for i in range(len(alphas))
-    ]
-    symm_states_matrix_1 = [
-        symm_states_1[i].data.to_array().flatten()
-        for i in range(len(symm_states_1))
-    ]
-    symm_states_1_dm_matrix = [
-        symm_states_1_dm[i].data.to_array()
-        for i in range(len(symm_states_1_dm))
-    ]
-
-    return symm_states_matrix_1, symm_states_1_dm
-
-
-def dm_coh_symm_small(num_qubits=3):
-    assert num_qubits > 0
-    angles = [0, 2 * np.pi / 3, 4 * np.pi / 3]
-    alphas = [np.exp(angles[i] * 1j) for i in range(len(angles))]
-
-    symm_states_1_dm = [
-        coherent_dm(N=2**num_qubits, alpha=1 * alphas[i])
-        for i in range(len(alphas))
-    ]
-    symm_states_1_dm_matrix = [
-        symm_states_1_dm[i].data.to_array()
-        for i in range(len(symm_states_1_dm))
-    ]
-    return symm_states_1_dm_matrix
+    return get_coherent_states(num_qubits, amps, angles)
 
 
 def sv_coh_symm_std():
