@@ -172,10 +172,10 @@ class POVMCircuit:
         logger.info(f"Depth {qc_iso.depth()}")
         qiskit.qasm2.dump(
             qc_iso,
-            f"qc_iso_{self.case_id}_no_backend.qasm",
+            f"{self.case_id}_no_backend.qasm",
         )
         logger.info(
-            f"The quantum circuit is saved to qc_iso_{self.case_id}_no_backend.qasm"
+            f"The quantum circuit is saved to {self.case_id}_no_backend.qasm"
         )
 
         return qc_iso
@@ -192,10 +192,10 @@ class POVMCircuit:
         logger.info(f"Depth {qc_iso.depth()}")
         qiskit.qasm2.dump(
             qc_iso,
-            f"qc_iso_{self.case_id}_{backend_name}.qasm",
+            f"{self.case_id}_{backend_name}.qasm",
         )
         logger.info(
-            f"The quantum circuit is saved to qc_iso_{self.case_id}_{backend_name}.qasm"
+            f"The quantum circuit is saved to {self.case_id}_{backend_name}.qasm"
         )
 
     def approx(self, logger, qc_iso):
@@ -219,10 +219,10 @@ class POVMCircuit:
         logger.info(f"Depth {qc_approx.depth()}")
         qiskit.qasm2.dump(
             qc_approx,
-            f"qc_iso_{self.case_id}_approx_no_backend.qasm",
+            f"{self.case_id}_approx_no_backend.qasm",
         )
         logger.info(
-            f"The quantum circuit is saved to qc_iso_{self.case_id}_approx_no_backend.qasm"
+            f"The quantum circuit is saved to {self.case_id}_approx_no_backend.qasm"
         )
 
     def basis_extend(self, i, dims):
