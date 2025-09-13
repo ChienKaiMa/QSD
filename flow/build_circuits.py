@@ -133,7 +133,7 @@ class POVMCircuit:
             isometry, "knill", method="estimate"
         )
         logger.info(
-            f"{est_ccd_cnot_counts}, {est_csd_cnot_counts}, {est_knill_cnot_counts}"
+            f"est_ccd_cnot_counts {est_ccd_cnot_counts}, est_csd_cnot_counts {est_csd_cnot_counts}, est_knill_cnot_counts {est_knill_cnot_counts}"
         )
 
         # exact_ccd_cnot_counts = qclib.isometry.cnot_count(isometry, "ccd", method="")
