@@ -19,10 +19,22 @@ from qiskit import transpile
 # from qiskit.synthesis import qs_decomposition
 import qclib.isometry
 
+import os
+
+"""
+```bash
+echo 'export IBM_QUANTUM_INSTANCE="your_instance"' >> ~/.bashrc
+echo 'export IBM_QUANTUM_TOKEN="your_token"' >> ~/.bashrc
+source ~/.bashrc
+```
+"""
+ibm_quantum_instance = os.getenv("IBM_QUANTUM_INSTANCE", "<YOUR_INSTANCE>")
+ibm_quantum_token = os.getenv("IBM_QUANTUM_TOKEN", "<YOUR_TOKEN>")
+
 service = qiskit_ibm_runtime.QiskitRuntimeService(
     channel='ibm_cloud',
-    instance='<YOUR_INSTANCE>',
-    token="<YOUR_TOKEN>",
+    instance=ibm_quantum_instance,
+    token=ibm_quantum_token,
 )
 
 
