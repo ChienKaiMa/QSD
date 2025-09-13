@@ -92,7 +92,7 @@ class POVMCircuit:
                 # print(check_op.round(3))
         return
 
-    def build_circuit(self):
+    def build_circuit(self, scheme="ccd"):
         logger = logging.getLogger(__name__)
 
         isometry = self.naimark(self.povm_vectors)
@@ -103,7 +103,6 @@ class POVMCircuit:
         # csd works, while ccd doesn't
         # 2024/11/11
         # ccd works by extending to unitary first
-        scheme = "ccd"
         logger.info(f"Transpile the isometry to quantum circuit using {scheme}")
         if scheme == "ccd":
             lines = isometry.shape[0]
