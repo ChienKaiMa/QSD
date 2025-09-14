@@ -1247,7 +1247,7 @@ def apply_crossQD_2(
                 strings_used += 1
 
     problem_spec.bitstring_to_target_state = bitstring_to_target_state.copy()
-    
+
     # Verify solution
     np.set_printoptions(precision=4)
     # print("Probabilities for each state:")
@@ -1775,8 +1775,7 @@ def min_ss_problem(
     qsd_problem: ProblemSpec,
     prior_prob: list[float] | None = None,
 ):
-    """SS stands for 'sum of squares'.
-    """
+    """SS stands for 'sum of squares'."""
     assert qsd_problem.state_type == "densitymatrix"
     logger = logging.getLogger(__name__)
 
@@ -1805,7 +1804,7 @@ def min_ss_problem(
             expr_rhs = prior_prob[i] * cp.trace(
                 cp.matmul(qsd_problem.states[i].data, PI_list[j])
             )
-            ss_expr += ((ideal_row[j] - cp.real(expr_rhs)) ** 2)
+            ss_expr += (ideal_row[j] - cp.real(expr_rhs)) ** 2
     objective = cp.Minimize(ss_expr)
 
     constraints = []
@@ -1898,7 +1897,6 @@ def solveQSDProblem(
             "Please fill the parameters in the cp.Problem before using this function."
         )
     return
-
 
 
 def get_Phi_tilde(problem_spec: ProblemSpec):
