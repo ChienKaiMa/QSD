@@ -829,19 +829,15 @@ def apply_dawei_mix(problem_spec: ProblemSpec, prior_prob=None, gamma=None):
     return
 
 
-def apply_crossQD(
+def apply_crossQSD(
     problem_spec: ProblemSpec,
     prior_prob=None,
     alpha=None,
     beta=None,
     noise_level=0,
-    reuse_fig=None,
-    is_cvxpy_verbose=False,
-    max_iters=int(5e5),
-    eps_abs=1e-7,
-    eps_rel=1e-7,
+    cvxpy_settings: dict | None = None,
 ):
-    """Apply the cross quantum discrimination method.
+    """Apply the cross quantum state discrimination method.
     beta: Threshold probabilities. List of [0, 1)
 
     """
@@ -864,148 +860,18 @@ def apply_crossQD(
         beta = [0.01] * n
     logger.info(f"The threshold probabilities (beta) are set to {beta}")
 
-    cvxpy_problem = gen_crossQD_dpp_problem(
+    cvxpy_problem = crossQSD_dpp_problem(
         problem_spec=problem_spec,
         prior_prob=prior_prob,
     )
 
     cvxpy_problem.param_dict["alpha"].value = alpha
     cvxpy_problem.param_dict["beta"].value = beta
-    result = cvxpy_problem.solve(
-        solver=cp.SCS,
-        verbose=is_cvxpy_verbose,
-        requires_grad=True,
-        mkl=True,
-        max_iters=int(max_iters),
-        eps_abs=eps_abs,
-        eps_rel=eps_rel,
-        acceleration_lookback=10,
-        warm_start=True,
-        # canon_backend=cp.SCIPY_CANON_BACKEND,
-        # time_limit_secs=180,
-    )
-    prob = cvxpy_problem
-    PI_list = cvxpy_problem.variables()
-
-    # TODO grab PI_list for postprocessing
-    print("Result =", result)
-    print(f"CVXPY returns {prob.status}")
-    logger.info(f"CVXPY returns {prob.status}")
-    if prob.status != "optimal" and prob.status != "optimal_inaccurate":
-        logger.error(f"CVXPY returns {prob.status}")
-        return False
-
-    povm = []
-    # TODO
-    # Check the rank of the Hermitian operators
-    # Log the rank of the Hermitian operators
-    # Dictionary of measured bitstrings to the target states
-    bitstring_to_target_state = dict()
-
-    strings_used = 0
-    for i in range(n + 1):
-        # print(f"Solution for PI_{i} =")
-        # print(PI_list[i].value)
-        u, s, v = np.linalg.svd(PI_list[i].value, hermitian=True)
-        for j in range(len(s)):
-            # Don't add if s[j] too small
-            if s[j] > 1e-7:
-                last_povm = u[:, j] * np.sqrt(s[j])
-                bitstring_to_target_state[strings_used] = i
-                povm.append(last_povm.conj())
-                strings_used += 1
-
-    problem_spec.bitstring_to_target_state = bitstring_to_target_state.copy()
-    ## print("bitstring_to_target_state")
-    ## print(bitstring_to_target_state)
-    ## print("strings_used")
-    ## print(strings_used)
-    # TODO save strings_used somewhere
-    #
-
-    # TODO
-    # Calculate the measurement operators
-    ## last_op = np.eye(problem_spec.num_amps, dtype="complex128")
-    ## for m in povm:
-    ##     # Add "None" to transpose
-    ##     # https://stackoverflow.com/a/11885718/13518808
-    ##     op = np.multiply(m[None].T.conj(), m)
-    ##     last_op -= op
-    ##     # print(m)
-    ## u, s, v = np.linalg.svd(last_op, hermitian=True)
-    ## last_povm = u[:, 0] * np.sqrt(s[0])
-    ## # print(last_povm)
-    ## povm.append(last_povm.conj())
-
-    # TODO Uncomment these lines
-    ## if not verify_povm(povm):
-    ##     print("POVM check failed.")
-    ##     return False
-    ## else:
-    ##     print("POVM check passed.")
-
-    # TODO
-    # Verify solution
-    np.set_printoptions(precision=4)
-    print("Probabilities for each state:")
-    total = 0
-    p_d = 0
-    p_inc = 0
-    povm = vectors_to_povm(povm)
-    for i in range(n):
-        probs = compute_event_probabilities(
-            prior_prob[i], povm, problem_spec.states[i].data
-        )
-        # print(probs)
-        total += sum(probs)
-
-    probability_matrix = []
-    for i in range(n):
-        probs = compute_event_probabilities(
-            prior_prob[i], povm, problem_spec.states[i].data
-        )
-        updated_probs = [0] * (len(prior_prob) + 1)
-        for j in range(strings_used):
-            target_state_index = bitstring_to_target_state[j]
-            updated_probs[target_state_index] += probs[j]
-        # TODO
-        # Postprocessing
-        print(updated_probs)
-        probability_matrix.append(updated_probs)
-
-    for i in range(n):
-        p_d += probability_matrix[i][i]
-        p_inc += probability_matrix[i][n]
-
-    print(f"Total probability = {total:.4f}")
-    print(f"Success probability = {p_d:.4f}")
-    print(f"Inconclusive probability = {p_inc:.4f}")
-    # TODO also return these values
-    print()
-    # save_prob_heatmap(
-    #     prior_prob,
-    #     povm,
-    #     problem_spec.states,
-    #     bitstring_to_target_state,
-    #     strings_used,
-    #     tag=rf"{n}_crossQD_$\alpha${alpha[0]:2f}_$\beta${beta[0]:2f}_l{noise_level:2f}",
-    #     reuse_fig=reuse_fig,
-    # )
-
-    result_dict = defaultdict()
-    result_dict["povm"] = povm
-    result_dict["total_prob"] = total
-    # result_dict["p_succ"] = p_succ
-    # result_dict["p_err"] = p_err
-    result_dict["p_inc"] = p_inc
-    result_dict["PI_list"] = [PI_list[i].value for i in range(len(PI_list))]
-    result_dict["bitstring_to_target_state"] = bitstring_to_target_state
-    result_dict["strings_used"] = strings_used
-
-    return result_dict
+    cvxpy_problem.solve(**cvxpy_settings)
+    return cvxpy_problem
 
 
-def gen_crossQD_dpp_problem(
+def crossQSD_dpp_problem(
     problem_spec: ProblemSpec,
     prior_prob=None,
     noise_level=0,  # TODO
@@ -1014,7 +880,7 @@ def gen_crossQD_dpp_problem(
     """Generate a semidefinite programming problem that satisfies the
     disciplined parametrized programming (DPP) ruleset. After the values
     of the parameters are specified, the CVXPY solver should solve for a
-    POVM for the cross quantum discrimination (crossQD) method.
+    POVM for the cross quantum state discrimination (crossQSD) method.
     Now we assume that the effect of the noise is already included in
     the density matrices of `problem_spec` (`problem_spec.states`).
     Access the parameters with cvxpy_problem.param_dict() ?
