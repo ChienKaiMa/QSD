@@ -1494,7 +1494,7 @@ def apply_Eldar(
         else:
             # povm.append(np.sqrt(sol[i]) * Phi_tilde[i].conj())
             povm_vectors.append(np.sqrt(sol[i]) * Phi_tilde[i].conj())
-            povm.append(sol[i] * q[i])
+            povm.append(sol[i] * q[i].T)
 
     povm.append(expr.value)
     distrib = []
