@@ -87,8 +87,7 @@ def sv_sic_asymm_small():
 def get_coherent_states(num_qubits, amps, angles):
     alphas = [amps[i] * np.exp(angles[i] * 1j) for i in range(len(angles))]
     qutip_state_vec = [
-        coherent(N=2**num_qubits, alpha=alphas[i])
-        for i in range(len(alphas))
+        coherent(N=2**num_qubits, alpha=alphas[i]) for i in range(len(alphas))
     ]
     qutip_dense_mat = [
         coherent_dm(N=2**num_qubits, alpha=alphas[i])
