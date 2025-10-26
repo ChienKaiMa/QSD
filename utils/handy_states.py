@@ -42,7 +42,7 @@ def sv_sic_symm_small():
     return {"num_qubits": 2, "num_states": 3, "states": sic_states}
 
 
-def sv_simple_2(a=1 / 10, b=1 / 6, c=1 / 5):
+def simple_2(a=1 / 10, b=1 / 6, c=1 / 5):
     num_qubits = 2
     num_states = 3
     z00 = np.array([1, 0, 0, 0])
@@ -53,12 +53,21 @@ def sv_simple_2(a=1 / 10, b=1 / 6, c=1 / 5):
     def normalize(v):
         return np.array(v) / np.linalg.norm(v)
 
-    states = [
-        Statevector(normalize(z00 + np.multiply(a, z11))),
-        Statevector(normalize(z01 + np.multiply(b, z11))),
-        Statevector(normalize(z10 + np.multiply(c, z11))),
+    numpy_state_vec = [
+        normalize(z00 + np.multiply(a, z11)),
+        normalize(z01 + np.multiply(b, z11)),
+        normalize(z10 + np.multiply(c, z11)),
     ]
-    return {"num_qubits": 2, "num_states": 3, "states": states}
+    numpy_dense_mat = [
+        DensityMatrix(numpy_state_vec[i]).data
+        for i in range(len(numpy_state_vec))
+    ]
+    return {
+        "num_qubits": num_qubits,
+        "num_states": num_states,
+        "state_vec": numpy_state_vec,
+        "dense_mat": numpy_dense_mat,
+    }
 
 
 def sv_sic_asymm_small():
