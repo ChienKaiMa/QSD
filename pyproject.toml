@@ -18,7 +18,8 @@ dependencies = [
     "pandas",
     "seaborn",
     # "tornado==6.4.2", # For webagg plots
-    "scs @ file:///${PROJECT_ROOT}/scs-python/dist/scs-3.2.7-cp312-cp312-linux_x86_64.whl", # Ensure build with MKL
+    # "scs @ file:///${PROJECT_ROOT}/scs-python/dist/scs-3.2.7-cp312-cp312-linux_x86_64.whl", # Ensure build with MKL
+    "scs>=3.2.7",
     "mosek==11.0.18",
     "qiskit-aer>=0.17",
 ]
