@@ -31,6 +31,13 @@ def povm_to_rank1_vectors(povm, threshold=1e-4):
     return np.array(povm_vectors), povm_map
 
 
+def get_povm_vectors(solved_cvxpy_prob):
+    vars = solved_cvxpy_prob.variables()
+    povm = [var.value for var in vars]
+    povm_vectors, _ = povm_to_rank1_vectors(povm, threshold=0)
+    return povm_vectors
+
+
 def compute_event_probabilities(prior_prob, povm, state: np.array):
     """
     Compute the probabilities of all possible measured values based
@@ -51,6 +58,7 @@ def compute_event_probabilities(prior_prob, povm, state: np.array):
         assert abs(trace_value.imag) <= 1e-7
         probs.append(prior_prob * abs(trace_value.real))
     return probs
+
 
 def calculate_prob_matrix(
     prior_probs, povm, states, bitstring_to_target_state, strings_used
