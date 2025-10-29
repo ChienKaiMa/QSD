@@ -27,7 +27,6 @@ echo 'export IBM_QUANTUM_INSTANCE="your_instance"' >> ~/.bashrc
 echo 'export IBM_QUANTUM_TOKEN="your_token"' >> ~/.bashrc
 source ~/.bashrc
 ```
-"""
 ibm_quantum_instance = os.getenv("IBM_QUANTUM_INSTANCE", "<YOUR_INSTANCE>")
 ibm_quantum_token = os.getenv("IBM_QUANTUM_TOKEN", "<YOUR_TOKEN>")
 
@@ -36,6 +35,7 @@ service = qiskit_ibm_runtime.QiskitRuntimeService(
     instance=ibm_quantum_instance,
     token=ibm_quantum_token,
 )
+"""
 
 
 def is_pos_semidef(x):
@@ -150,7 +150,7 @@ class POVMCircuit:
         qc_iso = self.transpile_wo_backend(logger, qc_iso)
 
         # Transpile with the backend
-        self.transpile_with_backend(logger, qc_iso, service)
+        # self.transpile_with_backend(logger, qc_iso, service)
 
         return qc_iso_pretranspile
 
