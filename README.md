@@ -28,7 +28,7 @@ source ./install.sh
 For a quick functionality check, reviewers can run a quick demo using:
 
 ```bash
-python quick_test_tacas.py
+python3 quick_test_tacas.py
 ```
 
 ### Replication of Results in the Paper
@@ -36,14 +36,14 @@ python quick_test_tacas.py
 To reproduce all experimental results presented in the paper, execute the following command:
 
 ```bash
-# (Command to be added)
+python3 all.py
 ```
 
 The entire process is expected to take about **??? hours**.
 All generated results will be stored in the `results` directory.
 
-* `???.csv`: raw data for **Fig. 1**, visualized as `???.png`
-* `???.csv`: raw data for **Fig. 2**, visualized as `???.png`
+* `results/crossqsd_results.csv`: raw data for **Fig. 1**, visualized as `results/crossqsd_ratio.png`
+* `results/fitqsd_results.csv`: raw data for **Fig. 2**, visualized as `results/fitqsd.png`
 * `???.csv`: raw data for **Fig. 3**, visualized as `???.png`
 * `???.csv`: raw data for **Fig. 4**, visualized as `???.png`
 * `???.csv`: raw data for **Table 3**, summarized in `???.csv`
