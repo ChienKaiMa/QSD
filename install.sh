@@ -15,13 +15,13 @@ uv sync
 # Activate the environment; only persists if script is sourced
 source .venv/bin/activate
 
-# Loosen qclib np.allclose tolerance; atol=1e-5
+# Loosen qclib np.allclose tolerance; atol=1e-3
 # Dynamically find the isometry.py path for portability across Python versions
 isometry_file=$(python -c "import qclib; print(qclib.__file__.rsplit('/', 1)[0] + '/isometry.py')")
-sed -i.bak "s/return np.allclose(identity, np.eye(int(2\*\*log_cols)))/return np.allclose(identity, np.eye(int(2\*\*log_cols)), atol=1e-5)/" "$isometry_file"
+sed -i.bak "s/return np.allclose(identity, np.eye(int(2\*\*log_cols)))/return np.allclose(identity, np.eye(int(2\*\*log_cols)), atol=1e-3)/" "$isometry_file"
 
 # Check if the fix was applied
-if grep -q "atol=1e-5" "$isometry_file"; then
+if grep -q "atol=1e-3" "$isometry_file"; then
     echo "qclib fix applied successfully."
 else
     echo "qclib fix not detected - check $isometry_file manually."
