@@ -1293,6 +1293,66 @@ def get_Phi_tilde(problem_spec: ProblemSpec):
     return Phi_tilde
 
 
+def hybrid_obj_problem(
+    problem_spec: ProblemSpec,
+    ideal_distrib,
+    param_a,
+    prior_prob: list[float] | None = None,
+) -> cp.Problem:
+    assert problem_spec.state_type == "densitymatrix"
+    logger = logging.getLogger(__name__)
+
+    k = problem_spec.num_states
+
+    # PI is the variable for the POVM elements we try to solve for.
+    PI_list = [
+        cp.Variable(
+            shape=(problem_spec.num_amps, problem_spec.num_amps),
+            hermitian=True,
+            name=f"PI_{i}",
+        )
+        for i in range(k + 1)
+    ]
+
+    # https://www.cvxpy.org/tutorial/dpp/index.html
+    # DPP forbids taking the product of two parametrized expressions,
+    # so we will not parametrize prior probabilities.
+    # Actually for this formulation, it is fine to parametrize it.
+    # For code uniformity, we will not do it.
+    # prior_prob = cp.Parameter(k, name="prior_prob")
+    if prior_prob is None:
+        prior_prob = np.ones(k) * (1 / k)
+        logger.info(f"The prior probabilities is set to uniform (k = {k})")
+    else:
+        logger.info(f"The prior probabilities is set to {prior_prob}")
+
+    prob_succ_expr = get_prob_succ_expr(
+        problem_spec=problem_spec, prior_prob=prior_prob, PI_list=PI_list
+    )
+
+    l1_expr = get_l1_dist_expr(
+        problem_spec=problem_spec,
+        prior_prob=prior_prob,
+        PI_list=PI_list,
+        prob_mat=ideal_distrib,
+    )
+
+    obj_expr = prob_succ_expr - param_a * l1_expr
+
+    objective = cp.Maximize(obj_expr)
+    constraints = []
+
+    # Constraint 1. Positive operators
+    for i in range(k + 1):
+        constraints.append(PI_list[i] >> 0)
+
+    # Constraint 2. Completeness
+    I = np.identity(problem_spec.num_amps)
+    constraints.append(cp.sum(PI_list) == I)
+
+    return cp.Problem(objective, constraints)
+
+
 if __name__ == "__main__":
     # TODO
     # Simple tests or solver comparison?
