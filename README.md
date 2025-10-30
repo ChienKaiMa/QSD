@@ -1,85 +1,90 @@
 # QSD
-Implementation of the quantum state discrimination in quantum circuits
+
+Implementation of the quantum state discrimination in quantum circuits.
 
 ## TACAS 2026 Artifact Submission
-* The hyperlink to the artifact: []() (TBA).
-* Additional requirements for the artifact: Install the required packages by executing the provided `./install.sh`.
-* Detailed instruction: Please find the user manual below. Reviewers can see a quick demo by executing:
+
+* **Artifact link:** []() *(TBA)*
+* We apply for the "Functional", "Reusable", and "Available" badges.
+* The artifact has been verified to run on the **TACAS 2026 Artifact Evaluation Virtual Machine** with Intel/AMD 64-bit host architecture (`TACAS26-AEC-amd64.ova`).
+  Please ensure that your environment has an active internet connection for installing third-party dependencies.
+
+### Installation
+
+After unzipping the artifact, navigate to the `QSD-master` directory and ensure you have full access permissions by using:
+
+```bash
+chmod -R 777 ./*
+```
+
+Then, install the dependencies and set up the environment by executing:
+
+```bash
+source ./install.sh
+```
+
+### Smoke Test
+
+For a quick functionality check, reviewers can run a quick demo using:
+
 ```bash
 python quick_test_tacas.py
 ```
-* Replication of results in the paper: Please see below for instructions.
-Notice: The following flow is tested to be able to run on the `TACAS 2026 Artifact Evaluation Virtual Machine`. Please make sure that you are connected to the internet.
 
-After you unzip the file, please enter the `SliQSim-master` directory and use the following command to ensure you have full permission to access files.
+### Replication of Results in the Paper
 
-```commandline
-chmod -R 777 ./*
+To reproduce all experimental results presented in the paper, execute the following command:
+
+```bash
+# (Command to be added)
 ```
-To install, simply run:
 
-```commandline
-./install.sh
-```
-(TBA: Notebook filenames)
-(TODO: Run the notebooks and check the time limits)
-If not specified, the default time limit is 600 seconds as stated in the paper, which makes the whole flow take about 1 hour.
-Feel free to set the time limit by yourself if you want to accelerate the process.
+The entire process is expected to take about **??? hours**.
+All generated results will be stored in the `results` directory.
 
-We apply for the "Functional", "Reusable", and "Available" badges.
+* `???.csv`: raw data for **Fig. 1**, visualized as `???.png`
+* `???.csv`: raw data for **Fig. 2**, visualized as `???.png`
+* `???.csv`: raw data for **Fig. 3**, visualized as `???.png`
+* `???.csv`: raw data for **Fig. 4**, visualized as `???.png`
+* `???.csv`: raw data for **Table 3**, summarized in `???.csv`
+* `???.csv`: raw data for **Fig. 7**, visualized as `???.png`
 
-Notice: The following is the user manual for general usage.
+---
+
+> **Notice:**   
+> The following sections are the general user manual beyond the TACAS evaluation scope.
 
 ## Introduction
-`QSD` is a software built for quantum state discrimination, that enables different strategies to find POVMs for QSD on top of `CVXPY` and provides conversion from these POVMs to executable quantum circuits.
+
+`QSD` is a software framework for quantum state discrimination that supports various strategies for finding POVMs using `CVXPY` and enables the automated conversion of these POVMs into executable quantum circuits.
+
 
 ## Download Source and Install Dependencies
 
-### Download Source from Zenodo (TACAS 2026 artifact submission)
-Link to the artifact: (TODO Change the url)
-```bash
-wget --user-agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" https://figshare.com/ndownloader/files/49820907 -O QSD-TACAS2026.zip
-chmod 777 QSD-TACAS2026.zip
-unzip QSD-TACAS2026.zip
-cd QSD
-```
+### Download from GitHub
 
-### Download Source from GitHub
+Clone the repository ~~and switch to the working branch~~ by:
+
 ```bash
 git clone https://github.com/ChienKaiMa/QSD.git
 cd QSD
-git checkout work
 ```
 
-### Install dependencies
-`uv` is an extremely fast Python package and project manager, written in Rust. We will install most of the dependencies using `uv`.
+### Install Dependencies
 
-This part is provided as a single file `install.sh`.
+Most dependencies can be installed automatically using `uv`, a fast Python package and project manager written in Rust.
+To set up the environment, run:
+
 ```bash
-# You can execute the file without sudo
 chmod 777 install.sh
-./install.sh
+source install.sh
 ```
 
-```bash
-# Make sure you're in the project folder
-cd QSD
+Optional dependencies for performance enhancement are listed in `optional_dep.md`, which may accelerate large-scale problem solving.
 
-# Install uv if uv is not installed yet
-wget -qO- https://astral.sh/uv/install.sh | sh
 
-# Sync the dependencies in pyproject.toml
-uv sync
-# Activate the environment
-source .venv/bin/activate
-```
-The optional dependencies are described in `optional_dep.md` and may provide acceleration for solving larger problems.
+## Execution (TODO: Add more explanations)
 
-## Execution
-All params that users can tweak (TBA)
-
-(The three code blocks in the paper)
-(TODO: Add more explanations)
 ### ProblemSpec: Problem instance construction
 ```python
 from utils.handy_states import simple_2 
