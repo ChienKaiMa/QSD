@@ -1196,11 +1196,12 @@ def min_ss_problem(
     return cp.Problem(objective, constraints)
 
 
-def max_psucc_min_diff_problem(
+def meco_problem(
     ideal_distrib,
     qsd_problem: ProblemSpec,
     prior_prob: list[float] | None = None,
 ):
+    # Renamed from max_psucc_min_diff_problem
     assert qsd_problem.state_type == "densitymatrix"
     logger = logging.getLogger(__name__)
 
