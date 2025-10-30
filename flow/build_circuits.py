@@ -46,6 +46,12 @@ class POVMCircuit:
     def __init__(self, povm_vectors=None, povm=None):
         self.povm_vectors = povm_vectors  # Assume rank-1 POVM
         self.povm = povm
+        if type(self.povm_vectors) != type(None):
+            self.num_qubits = int(np.log2(len(self.povm_vectors[0])))
+        else:
+            self.num_qubits = int(np.log2(len(self.povm[0])))
+        self.num_amps = 2**(self.num_qubits)
+        self.case_id = str(self.num_qubits)
         return
 
     @classmethod
