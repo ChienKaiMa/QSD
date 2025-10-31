@@ -40,7 +40,7 @@ python3 all.py
 ```
 
 The entire process is expected to take several hours to complete.  
-As the replication of *Table 3* accounts for most of the runtime, users may include the `--qubits {n_qubit}` parameter, where `n_qubit` $\in \{2, 3, 4, 5\}$, to generate results only for rows up to `n_qubit` in *Table 3*.  
+As the replication of **Table 3** accounts for most of the runtime, users may include the `--qubits {n_qubit}` parameter, where `n_qubit` $\in \{2, 3, 4, 5\}$, to generate results only for rows up to `n_qubit` in **Table 3**.  
 All generated results will be stored in the `results` directory.  
 * `crossqsd_results.csv`: raw data for **Fig. 1**, visualized as `crossqsd_ratio.png`
 * `fitqsd_results.csv`: raw data for **Fig. 2**, visualized as `fitqsd.png`
