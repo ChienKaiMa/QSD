@@ -3,7 +3,7 @@ import sys
 sys.path.append("../")
 sys.path.append("./")
 from flow.problem_spec import *
-from temp.get_random_seeds import *
+from utils.get_random_seeds import *
 from argparse import ArgumentParser
 
 import time

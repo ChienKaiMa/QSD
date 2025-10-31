@@ -11,7 +11,7 @@ from flow.verify_povm import *
 import numpy as np
 import cvxpy as cp
 from scipy.linalg import null_space
-from temp.get_random_seeds import get_random_seeds
+from utils.get_random_seeds import get_random_seeds
 from utils.prob_matrix import *
 import time
 import tracemalloc
