@@ -4,7 +4,7 @@ Implementation of the quantum state discrimination in quantum circuits.
 
 ## TACAS 2026 Artifact Submission
 
-* **Artifact link:** []() *(TBA)*
+* **Artifact link:** [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17493037.svg)](https://doi.org/10.5281/zenodo.17493037)
 * We apply for the **"Functional"**, **"Reusable"**, and **"Available"** badges.
 * The artifact has been verified to run on the **TACAS 2026 Artifact Evaluation Virtual Machine** with Intel/AMD 64-bit host architecture (`TACAS26-AEC-amd64.ova`).
   Please ensure that your environment has an active internet connection for installing third-party dependencies.
