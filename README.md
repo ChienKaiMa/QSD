@@ -5,7 +5,7 @@ Implementation of the quantum state discrimination in quantum circuits.
 ## TACAS 2026 Artifact Submission
 
 * **Artifact link:** []() *(TBA)*
-* We apply for the "Functional", "Reusable", and "Available" badges.
+* We apply for the **"Functional"**, **"Reusable"**, and **"Available"** badges.
 * The artifact has been verified to run on the **TACAS 2026 Artifact Evaluation Virtual Machine** with Intel/AMD 64-bit host architecture (`TACAS26-AEC-amd64.ova`).
   Please ensure that your environment has an active internet connection for installing third-party dependencies.
 
@@ -39,9 +39,9 @@ To reproduce all experimental results presented in the paper, execute the follow
 python3 all.py
 ```
 
-The entire process is expected to take about **??? hours**.
-All generated results will be stored in the `results` directory.
-
+The entire process is expected to take several hours to complete.  
+As the replication of *Table 3* accounts for most of the runtime, users may include the `--qubits {n_qubit}` parameter, where `n_qubit` $\in \{2, 3, 4, 5\}$, to generate results only for rows up to `n_qubit` in *Table 3*.  
+All generated results will be stored in the `results` directory.  
 * `crossqsd_results.csv`: raw data for **Fig. 1**, visualized as `crossqsd_ratio.png`
 * `fitqsd_results.csv`: raw data for **Fig. 2**, visualized as `fitqsd.png`
 * `hybrid_psucc_results_3states.csv`: raw data for **Fig. 3 (left)**, visualized as `hybrid_3states_psucc.png`
@@ -65,7 +65,7 @@ All generated results will be stored in the `results` directory.
 
 ### Download from GitHub
 
-Clone the repository ~~and switch to the working branch~~ by:
+Clone and enter the repository by:
 
 ```bash
 git clone https://github.com/ChienKaiMa/QSD.git
