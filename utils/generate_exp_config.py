@@ -2,6 +2,14 @@
 
 import json
 
+# params = [0.1 ** (3 - 0.25 * i) for i in range(10)]
+# params = [0.5 - 0.04 * i for i in range(10)]
+# params = [0.3 - 0.01 * i for i in range(20)]
+
+# noise_levels = [0.1]
+# noise_levels = [0.01 * i for i in range(1, 3)]
+# noise_levels = [0.01 * i for i in range(1, 11)]
+# noise_levels = [0.005 * i for i in range(1, 21)]
 
 def dump_linspace_params_to_json(
     start, stop, num=50, endpoint=True, dtype="float64", filename="linspace_params.json"
@@ -63,6 +71,11 @@ def generate_large_config():
     )
     
 
+def generate_states_config():
+    # TODO
+    # Specify the configuration to generate a particular set of states
+    # Types: random, trivial, 
+    return
 
 if __name__ == "__main__":
     generate_small_config()

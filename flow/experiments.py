@@ -1,7 +1,7 @@
-from plots import disable_excessive_logging, plot_psucc_noise_tol
-from interface import SolverInterface
-from problem_spec import ProblemSpec
-from solve_mix import apply_crossQD
+import flow.plots
+from flow.interface import SolverInterface
+from flow.problem_spec import ProblemSpec
+from flow.solve_mix import apply_crossQD
 from temp.get_random_seeds import get_random_seeds
 import json
 import logging
@@ -23,7 +23,7 @@ def exp_rel_psucc_noise_tol(**kwargs):
 
     logging.basicConfig(level=logging.DEBUG)
     logger = logging.getLogger(__name__)
-    disable_excessive_logging()
+    flow.plots.disable_excessive_logging()
 
     noise_levels = kwargs["noise"]
     tol = kwargs["tol"]
@@ -59,6 +59,11 @@ def exp_rel_psucc_noise_tol(**kwargs):
     ptot_matrix = []
     psucc_matrix = []
     pinc_matrix = []
+    import matplotlib.pyplot as plt
+    fig = plt.figure(dpi=900)
+    fig.set_figwidth(6)
+    fig.set_figheight(4.8)
+
     for noise_level in noise_levels:
         combined_states = [
             (1 - noise_level) * dense_states[_].data
@@ -83,6 +88,7 @@ def exp_rel_psucc_noise_tol(**kwargs):
                 alpha=[t] * problem.num_states,
                 beta=[t] * problem.num_states,
                 noise_level=noise_level,
+                reuse_fig=fig,
             )
             try:
                 povm, total, p_d, p_inc = result
@@ -108,7 +114,7 @@ def exp_rel_psucc_noise_tol(**kwargs):
     np.save(f"results/psucc_{case_id}.npy", psucc_matrix)
     np.save(f"results/pinc_{case_id}.npy", pinc_matrix)
 
-    plot_psucc_noise_tol(tol, noise_levels, psucc_matrix, case_id)
+    plots.plot_psucc_noise_tol(tol, noise_levels, psucc_matrix, case_id, 40)
     return
 
 
@@ -129,7 +135,7 @@ def exp_rel_psucc_noise_fptol_fntol(**kwargs):
     import numpy as np
 
     si = SolverInterface(__name__)
-    disable_excessive_logging()
+    plots.disable_excessive_logging()
     
     noise_levels = kwargs["noise"]
     fptol = kwargs["fptol"]
@@ -265,7 +271,7 @@ def exp_rel_psucc_noise_fptol_fntol(**kwargs):
     # Dump probs
     np.save(f"prob_{case_id}.npy", prob)
 
-    plot_psucc_noise_tol(tol, noise_levels, prob, case_id)
+    plots.plot_psucc_noise_tol(tol, noise_levels, prob, case_id, 40)
     # save_3dplot(points, fig)
 
     logger.info(f"Memory (current, peak, in bytes) = {tracemalloc.get_traced_memory()}")

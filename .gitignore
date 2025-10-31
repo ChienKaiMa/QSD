@@ -159,3 +159,11 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 uv.lock
+scale_and_sim_2024-06-24/*
+scale_and_sim_2024-06-26/*
+scale_and_sim_2024-07-03/*
+upload_to_ibmq_2024-07-01/*
+*.npy
+*.csv
+*.png
+*.qasm

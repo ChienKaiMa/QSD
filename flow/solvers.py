@@ -1,6 +1,9 @@
 from problem_spec import *
 import numpy as np
 import cvxpy as cp
+import time
+from argparse import ArgumentParser
+import tracemalloc
 # import cplex
 
 def apply_Eldar(problem_spec: ProblemSpec, prior_prob=None, min_prob=0):
@@ -15,6 +18,7 @@ def apply_Eldar(problem_spec: ProblemSpec, prior_prob=None, min_prob=0):
     # Default to uniform distribution
     n = problem_spec.num_states
     if prior_prob is None:
+        # TODO Check input is negative
         prior_prob = np.ones(n) * (-1 / n)
         logger.info(f"The prior probabilities is set to uniform (n = {n})")
 
@@ -133,6 +137,6 @@ if __name__ == "__main__":
     povm = apply_Eldar(problem_spec=problem)
     logger.info(f"Memory (current, peak, in bytes) = {tracemalloc.get_traced_memory()}")
     tracemalloc.stop()
-    np.save(f"povm_{case_id}.npy", povm)
+    np.save(f"povm_{case_id}_ideal.npy", povm)
     logger.info(f"The POVM is saved to povm_{case_id}.npy")
     # TODO Remember the remaining operators

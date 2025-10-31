@@ -5,6 +5,7 @@ from scipy.optimize import NonlinearConstraint, OptimizeResult, minimize
 from scipy.linalg import null_space
 import cobyqa
 from qiskit.quantum_info import random_statevector, Statevector
+from get_random_seeds import *
 
 # https://stackoverflow.com/questions/55132107/scipy-fitting-with-parameters-in-a-vector
 from operator import add
@@ -15,7 +16,7 @@ import sys
 
 # TODO Come up with a better class name
 class NullSpaceSearchProblem:
-    def __init__(self, num_qubits, num_states):
+    def __init__(self, num_qubits, num_states, prior_prob=None):
         assert num_qubits > 0
         assert num_states > 1
         self.num_qubits = num_qubits
@@ -30,6 +31,7 @@ class NullSpaceSearchProblem:
         self.null_spaces = []
         self.null_coeffs = []
         self.constraints = []
+        self.prior_prob = prior_prob
         self.x0 = 0
         self.x = 0
 
@@ -197,15 +199,15 @@ class NullSpaceSearchProblem:
         s_imag = np.array([i.imag for i in self.states[op_idx].data])
         vec_real = np.array(self.whole_vec_real(op_idx, x))
         vec_imag = np.array(self.whole_vec_imag(op_idx, x))
-        final_real = np.inner(s_real, vec_real) - np.inner(s_imag, vec_imag)
-        final_imag = np.inner(s_real, vec_imag) + np.inner(s_imag, vec_real)
+        final_real = np.inner(s_real, vec_real) + np.inner(s_imag, vec_imag)
+        final_imag = np.inner(s_real, vec_imag) - np.inner(s_imag, vec_real)
         return final_real**2 + final_imag**2
 
     def obj(self, x):
         # The final objective function
         s = 0
         for i in range(self.num_ops):
-            s += self.mult_vec_and_state_real(i, x)
+            s += self.prior_prob[i] * self.mult_vec_and_state_real(i, x)
         return -s
 
     def set_init(self, x):
@@ -217,6 +219,7 @@ class NullSpaceSearchProblem:
             self.x0 = np.zeros(self.num_vars)
         # TODO Find a better initial point with brute-force heuristic
         else:
+            # method == "rand_norm"
             x = np.random.random_sample(self.num_vars) * 2 - 1
             self.x0 = self.norm_vars(x)
         return
@@ -233,13 +236,16 @@ class NullSpaceSearchProblem:
 
     def solve(self, method="COBYQA", **options):
         assert type(self.x0) == list
+        
+        if self.prior_prob is None:
+            self.prior_prob = np.ones(self.num_states) * (1 / self.num_states)
         if method == "COBYQA":
             result: OptimizeResult = cobyqa.minimize(
                 fun=self.obj,
                 x0=self.x0,
                 constraints=self.constraints,
                 options={
-                    "target": 0,
+                    "target": -1,
                     "maxfev": 30000,
                     # "disp": True,
                     # "radius_init": 0.6,
@@ -325,7 +331,7 @@ class NullSpaceSearchProblem:
             # vdot or matmul?
             # a += (np.abs(np.vdot(self.states[i].data, final_ops[i])) ** 2)
             print(self.states[i].data)
-            a += np.linalg.norm(np.vdot(final_ops[i], self.states[i].data)) ** 2
+            a += self.prior_prob[i] * np.linalg.norm(np.vdot(final_ops[i], self.states[i].data)) ** 2
         for i in range(self.num_ops):
             print(final_ops[i])
         print("a =", a)
@@ -371,17 +377,67 @@ class NullSpaceSearchProblem:
         prob.find_null_spaces()
         prob.build_cons()
         prob.find_init()
-        prob.solve()
+        prob.solve(method="SLSQP")
+        prob.x = prob.norm_vars(prob.x)
         prob.verify()
 
         return
 
+    @staticmethod
+    def test_brute():
+        # Skip any solver and check random assignments
+        np.set_printoptions(precision=4)
+        prob = NullSpaceSearchProblem(num_qubits=2, num_states=3)
+        prob.set_states()
+        # print(prob.states)
+        prob.find_null_spaces()
+        prob.build_cons()
+        num_samples = 0
+        while not prob.verify():
+            num_samples += 1
+            print(num_samples)
+            x = np.random.random_sample(prob.num_vars) * 2 - 1
+            prob.x = prob.norm_vars(x)
+        print(num_samples)
+        print(prob.x)
+
+        return
+
+    def solve_and_lock(self):
+        # Fix one of the vectors and solve with null spaces again
+        # TODO
+        return
+
+    @staticmethod
+    def test_brute_multistart():
+        # Solve with random starting points
+        np.set_printoptions(precision=4)
+        prob = NullSpaceSearchProblem(num_qubits=2, num_states=3)
+        prob.set_states()
+        # print(prob.states)
+        prob.find_null_spaces()
+        prob.build_cons()
+        num_samples = 0
+        stop = False
+        while not stop:
+            num_samples += 1
+            print(num_samples)
+            prob.find_init()
+            prob.solve()
+            # prob.x = np.array(x_unit)
+            prob.x = prob.norm_vars(prob.x)
+            stop = prob.verify()
+        print(num_samples)
+        print(prob.x)
+
+        return
 
     @staticmethod
     def test_expand_solve():
         np.set_printoptions(precision=4)
         prob = NullSpaceSearchProblem(num_qubits=2, num_states=3)
         prob.set_states()
+        prob.expand_solve()
         prob.expand_solve()
         prob.find_null_spaces()
         prob.build_cons()
@@ -488,6 +544,25 @@ class NullSpaceSearchProblem:
         prob.apply_Eldar()
         return
 
+    @staticmethod
+    def test_obj(size=2):
+        # Predefined vectors
+        a = [0.5 + 0.2j, 0.3 + 0.4j, 0.5 + 0.2j, 0.5 + 0.2j]
+        b = [0.9 - 0.3j, 0.1 + 0.4j, 0.2 + 0.4j, 0.5 + 0.2j]
+        x = [1, 2, 3, 4]
+        states = []
+        states.append(a)
+        states.append(b)
+        prob = NullSpaceSearchProblem(2, 2)
+        prob.set_states(states)
+        res = prob.mult_vec_and_state_real()
+        print(res)
+        return
+
 
 if __name__ == "__main__":
-    NullSpaceSearchProblem.test()
+    # NullSpaceSearchProblem.test_brute_multistart()
+    # NullSpaceSearchProblem.test_brute()
+    NullSpaceSearchProblem.test_expand_solve()
+    # NullSpaceSearchProblem.test_Eldar()
+    # NullSpaceSearchProblem.test_obj()

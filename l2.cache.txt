@@ -1,0 +1,14 @@
+```bash
+python -m unittest -v tests.test_states
+```
+
+Try to call all the Python scripts in the root directory.
+
+
+```bash
+python flow/test_similar_uqsd_plot.py --quick_access sic_symm &> sic.log
+```
+
+```bash
+MARCH_NATIVE=1 OPENMP_FLAG="-fopenmp" pip install diffcp
+```

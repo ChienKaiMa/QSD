@@ -10,12 +10,16 @@ def mutual_information(prob_mat, prior_prob, k):
     # prob_mat: k x (k+1) joint probabilities p(Y=y_m, X=H_i), prior_prob: k-length array
     prob_mat = np.array(prob_mat)
     p_y = np.sum(prob_mat, axis=0)  # Marginal p(y_m), shape (k+1,)
+    print(p_y)
     H_Y = entropy(p_y)
+    print("H_Y", H_Y)
     H_Y_given_X = 0
     for i in range(k):
         if prior_prob[i] > 0:
             cond_probs = prob_mat[i, :] / prior_prob[i]  # p(Y=y_m | X=H_i)
+            print(cond_probs)
             H_Y_given_X += prior_prob[i] * entropy(cond_probs)
+    print("H_Y_given_X", H_Y_given_X)
     return H_Y - H_Y_given_X
 
 
@@ -55,21 +59,51 @@ def holevo_bound(dense_mat, prior_prob, dep_noise=0.0):
 
 
 if __name__ == "__main__":
-    from qutip import coherent_dm
+    n = 2
 
-    prior_prob = np.array([1 / 4] * 4)
+    prob_mat = np.array(
+        [
+            [0.3, 0.15, 0.05],
+            [0.4, 0.02, 0.08],
+        ]
+    )
+    prob_mat = np.array(
+        [
+            [0.5, 0, 0],
+            [0, 0.5, 0],
+        ]
+    )
+    prob_mat = np.array(
+        [
+            [0, 0, 0.5],
+            [0, 0.5, 0],
+        ]
+    )
+    print(prob_mat)
+    print(
+        mutual_information(
+            prob_mat=prob_mat,
+            prior_prob=np.ones(n) * (1 / n),
+            k=n,
+        )
+    )
 
-    # Example coherent states
-    N = 8
-    alpha = 2
-    dense_mat = [
-        coherent_dm(N, 0).full(),
-        coherent_dm(N, alpha / 2).full(),
-        coherent_dm(N, 2 * alpha / 4).full(),
-        coherent_dm(N, 3 * alpha / 4).full(),
-    ]
-
-    # Compute Holevo bound for different dep_noise values
-    for dep_noise in [0.0, 0.001, 0.1]:
-        chi = holevo_bound(dense_mat, prior_prob, dep_noise=dep_noise)
-        print(f"Holevo bound (dep_noise={dep_noise}): {chi:.4f} bits")
+# if __name__ == "__main__":
+#     from qutip import coherent_dm
+#
+#     prior_prob = np.array([1 / 4] * 4)
+#
+#     # Example coherent states
+#     N = 8
+#     alpha = 2
+#     dense_mat = [
+#         coherent_dm(N, 0).full(),
+#         coherent_dm(N, alpha / 2).full(),
+#         coherent_dm(N, 2 * alpha / 4).full(),
+#         coherent_dm(N, 3 * alpha / 4).full(),
+#     ]
+#
+#     # Compute Holevo bound for different dep_noise values
+#     for dep_noise in [0.0, 0.001, 0.1]:
+#         chi = holevo_bound(dense_mat, prior_prob, dep_noise=dep_noise)
+#         print(f"Holevo bound (dep_noise={dep_noise}): {chi:.4f} bits")

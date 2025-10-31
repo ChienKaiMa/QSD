@@ -1,0 +1,21 @@
+# TODO
+# Initialize a random amplitude distribution as the target state
+# 1. Construct without qiskit or qclib
+# 2. Construct with qiskit.isometry
+# 3. Construct with qclib.LowRankInitialize
+# 4. Construct with qclib.UCGInitilize
+# 5. Best depth/gate count
+
+# QSD main circuit
+# 1. Construct with the knowledge of the target state
+# 2. Construct without the knowledge of the target state
+# 3. Different recursive depth optimzation flows
+# Result analysis
+# 1. Success rate for discrimination in theory and on different devices
+# 2. Circuit depth comparison
+# 3. Error analysis
+# (gate type, machine error properties, circuit depth and more?)
+# Discussion
+# 1. Strength as a type of benchmark?
+# 2. The state_prep methods that I skipped
+# 3. The uniqueness or optimality of the main circuit construction

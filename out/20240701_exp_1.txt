@@ -1,0 +1,101 @@
+QStandardPaths: wrong permissions on runtime directory /run/user/1000/, 0755 instead of 0700
+/home/koova22/QSD/experiments.py:293: DeprecationWarning: The Sampler and Estimator V1 primitives have been deprecated as of qiskit-ibm-runtime 0.23.0 and will be removed no sooner than 3 months after the release date. Please use the V2 Primitives. See the `V2 migration guide <https://docs.quantum.ibm.com/api/migration-guides/v2-primitives>`_. for more details
+  sampler = qiskit_ibm_runtime.Sampler(backend=ibm_backend)
+/home/koova22/QSD/experiments.py:293: DeprecationWarning: The Sampler and Estimator V1 primitives have been deprecated as of qiskit-ibm-runtime 0.23.0 and will be removed no sooner than 3 months after the release date. Please use the V2 Primitives. See the `V2 migration guide <https://docs.quantum.ibm.com/api/migration-guides/v2-primitives>`_. for more details
+  sampler = qiskit_ibm_runtime.Sampler(backend=ibm_backend)
+Name: ibm_brisbane
+Version: 2
+No. of qubits: 127
+
+19
+ct13yz3cqfh00089rgp0
+Name: ibm_brisbane
+Version: 2
+No. of qubits: 127
+
+19
+ct13z9d1k1wg008rk2kg
+QStandardPaths: wrong permissions on runtime directory /run/user/1000/, 0755 instead of 0700
+/home/koova22/QSD/experiments.py:293: DeprecationWarning: The Sampler and Estimator V1 primitives have been deprecated as of qiskit-ibm-runtime 0.23.0 and will be removed no sooner than 3 months after the release date. Please use the V2 Primitives. See the `V2 migration guide <https://docs.quantum.ibm.com/api/migration-guides/v2-primitives>`_. for more details
+  sampler = qiskit_ibm_runtime.Sampler(backend=ibm_backend)
+/home/koova22/QSD/experiments.py:293: DeprecationWarning: The Sampler and Estimator V1 primitives have been deprecated as of qiskit-ibm-runtime 0.23.0 and will be removed no sooner than 3 months after the release date. Please use the V2 Primitives. See the `V2 migration guide <https://docs.quantum.ibm.com/api/migration-guides/v2-primitives>`_. for more details
+  sampler = qiskit_ibm_runtime.Sampler(backend=ibm_backend)
+/home/koova22/QSD/experiments.py:293: DeprecationWarning: The Sampler and Estimator V1 primitives have been deprecated as of qiskit-ibm-runtime 0.23.0 and will be removed no sooner than 3 months after the release date. Please use the V2 Primitives. See the `V2 migration guide <https://docs.quantum.ibm.com/api/migration-guides/v2-primitives>`_. for more details
+  sampler = qiskit_ibm_runtime.Sampler(backend=ibm_backend)
+/home/koova22/QSD/experiments.py:293: DeprecationWarning: The Sampler and Estimator V1 primitives have been deprecated as of qiskit-ibm-runtime 0.23.0 and will be removed no sooner than 3 months after the release date. Please use the V2 Primitives. See the `V2 migration guide <https://docs.quantum.ibm.com/api/migration-guides/v2-primitives>`_. for more details
+  sampler = qiskit_ibm_runtime.Sampler(backend=ibm_backend)
+Name: ibm_brisbane
+Version: 2
+No. of qubits: 127
+
+19
+ct140a9cqfh00089rgx0
+UQSD
+Name: ibm_brisbane
+Version: 2
+No. of qubits: 127
+
+19
+ct140ma6kcdg008t3bxg
+MED
+Name: ibm_brisbane
+Version: 2
+No. of qubits: 127
+
+19
+ct141cn1k1wg008rk2xg
+UQSD
+Name: ibm_brisbane
+Version: 2
+No. of qubits: 127
+
+19
+ct14238cqfh00089rh60
+MED
+QStandardPaths: wrong permissions on runtime directory /run/user/1000/, 0755 instead of 0700
+/home/koova22/QSD/experiments.py:293: DeprecationWarning: The Sampler and Estimator V1 primitives have been deprecated as of qiskit-ibm-runtime 0.23.0 and will be removed no sooner than 3 months after the release date. Please use the V2 Primitives. See the `V2 migration guide <https://docs.quantum.ibm.com/api/migration-guides/v2-primitives>`_. for more details
+  sampler = qiskit_ibm_runtime.Sampler(backend=ibm_backend)
+/home/koova22/QSD/experiments.py:293: DeprecationWarning: The Sampler and Estimator V1 primitives have been deprecated as of qiskit-ibm-runtime 0.23.0 and will be removed no sooner than 3 months after the release date. Please use the V2 Primitives. See the `V2 migration guide <https://docs.quantum.ibm.com/api/migration-guides/v2-primitives>`_. for more details
+  sampler = qiskit_ibm_runtime.Sampler(backend=ibm_backend)
+/home/koova22/QSD/experiments.py:293: DeprecationWarning: The Sampler and Estimator V1 primitives have been deprecated as of qiskit-ibm-runtime 0.23.0 and will be removed no sooner than 3 months after the release date. Please use the V2 Primitives. See the `V2 migration guide <https://docs.quantum.ibm.com/api/migration-guides/v2-primitives>`_. for more details
+  sampler = qiskit_ibm_runtime.Sampler(backend=ibm_backend)
+/home/koova22/QSD/experiments.py:293: DeprecationWarning: The Sampler and Estimator V1 primitives have been deprecated as of qiskit-ibm-runtime 0.23.0 and will be removed no sooner than 3 months after the release date. Please use the V2 Primitives. See the `V2 migration guide <https://docs.quantum.ibm.com/api/migration-guides/v2-primitives>`_. for more details
+  sampler = qiskit_ibm_runtime.Sampler(backend=ibm_backend)
+Name: ibm_brisbane
+Version: 2
+No. of qubits: 127
+
+19
+ct149kp6kcdg008t3dh0
+UQSD
+Name: ibm_brisbane
+Version: 2
+No. of qubits: 127
+
+19
+ct14bhpjyjyg008skqng
+MED
+Name: ibm_brisbane
+Version: 2
+No. of qubits: 127
+
+19
+ct14fex6kcdg008t3ed0
+UQSD
+Name: ibm_brisbane
+Version: 2
+No. of qubits: 127
+
+19
+ct14k441k1wg008rk5eg
+MED
+QStandardPaths: wrong permissions on runtime directory /run/user/1000/, 0755 instead of 0700
+/home/koova22/QSD/experiments.py:293: DeprecationWarning: The Sampler and Estimator V1 primitives have been deprecated as of qiskit-ibm-runtime 0.23.0 and will be removed no sooner than 3 months after the release date. Please use the V2 Primitives. See the `V2 migration guide <https://docs.quantum.ibm.com/api/migration-guides/v2-primitives>`_. for more details
+  sampler = qiskit_ibm_runtime.Sampler(backend=ibm_backend)
+Rerun qubit=2 MED
+Name: ibm_brisbane
+Version: 2
+No. of qubits: 127
+
+19
+ct15bvz1k1wg008rkad0

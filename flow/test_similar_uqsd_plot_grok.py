@@ -1,6 +1,7 @@
 from solve_mix import *
 import numpy as np
 import matplotlib
+
 matplotlib.use("webagg")
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
@@ -26,14 +27,25 @@ from scipy.stats import entropy, wasserstein_distance
 from scipy.spatial.distance import jensenshannon
 
 
-def grad_descent_param(alpha_init, beta_init, cvxpy_problem, problem_spec, ideal_distrib, max_iters=20):
+def grad_descent_param(
+    alpha_init,
+    beta_init,
+    cvxpy_problem,
+    problem_spec,
+    ideal_distrib,
+    max_iters=20,
+):
     """Optimize tol parameter using AdamW with CVXPY backward."""
-    initial_tol = torch.tensor(max(alpha_init + beta_init), dtype=torch.float32, requires_grad=True)
+    initial_tol = torch.tensor(
+        max(alpha_init + beta_init), dtype=torch.float32, requires_grad=True
+    )
     num_states = problem_spec.num_states
     lower_bound = torch.tensor(0.0, dtype=torch.float32)
-    upper_bound = torch.tensor(1.0 - 1.0/num_states, dtype=torch.float32)
+    # upper_bound = torch.tensor(1.0 - 1.0/num_states, dtype=torch.float32)
+    ub = min(1.0 - 1.0 / num_states, max(alpha_init + beta_init))
+    upper_bound = torch.tensor(ub, dtype=torch.float32)
 
-    optimizer = torch.optim.AdamW([initial_tol], lr=0.1, weight_decay=0.01)
+    optimizer = torch.optim.AdamW([initial_tol], lr=ub * 0.01, weight_decay=0.01)
 
     tol_list = []
     grad_list = []
@@ -44,9 +56,17 @@ def grad_descent_param(alpha_init, beta_init, cvxpy_problem, problem_spec, ideal
         cvxpy_problem.param_dict["tol"].value = initial_tol.detach().numpy()
 
         # Solve
-        result = cvxpy_problem.solve(solver=cp.SCS, requires_grad=True, verbose=False)
+        result = cvxpy_problem.solve(
+            solver=cp.SCS, requires_grad=True, verbose=False
+        )
         if cvxpy_problem.status != cp.OPTIMAL:
-            js_dist = get_js_distance([initial_tol.item()], 0.0, problem_spec, cvxpy_problem, ideal_distrib)
+            js_dist = get_js_distance(
+                [initial_tol.item()],
+                0.0,
+                problem_spec,
+                cvxpy_problem,
+                ideal_distrib,
+            )
         else:
             povm = [v.value for v in cvxpy_problem.variables()]
             mat = calculate_prob_matrix_simple(
@@ -65,7 +85,7 @@ def grad_descent_param(alpha_init, beta_init, cvxpy_problem, problem_spec, ideal
         # Backward
         cvxpy_problem.backward()
         grad = cvxpy_problem.param_dict["tol"].gradient
-        initial_tol.grad = torch.tensor(grad, dtype=torch.float32)
+        initial_tol.grad = -torch.tensor(grad, dtype=torch.float32)
 
         # AdamW step
         optimizer.step()
@@ -82,31 +102,42 @@ def grad_descent_param(alpha_init, beta_init, cvxpy_problem, problem_spec, ideal
         print(f"Iteration {i}: tol={tol_list[-1]:.4f}, JS_dist={js_dist:.4f}")
 
     # Plot
-    
     fg = plt.figure(figsize=(10, 6))
+    ax1 = plt.subplot(311)
     plt.plot(range(max_iters), tol_list, ".-", label="Tolerance")
+    plt.legend()
+
+    ax2 = plt.subplot(312, sharex=ax1)
     plt.plot(range(max_iters), grad_list, ".-", label="Gradient")
-    # plt.plot(range(max_iters), js_dist_list, ".-", label="JS Divergence")
-    plt.xlabel("Iteration")
-    plt.title(f"Optimization at Noise Level {noise_level:.6f}")
-    ax = fg.gca()
+    plt.legend()
+
+    ax3 = plt.subplot(313, sharex=ax1)
+    plt.plot(range(max_iters), js_dist_list, ".-", label="JS Divergence")
+    # plt.xlim(0.01, 5.0)
     
-    ax.xaxis.set_major_locator(MaxNLocator(nbins=5,integer=True))
+    plt.xlabel("Iteration")
+    plt.suptitle(f"Optimization at Noise Level {noise_level:.6f}")
+    ax = fg.gca()
+
+    ax.xaxis.set_major_locator(MaxNLocator(nbins=5, integer=True))
     plt.legend()
     plt.grid(True)
     plt.savefig(f"opt_{noise_level:.6f}.png")
     plt.close()
 
     # Save data
-    data_df = pd.DataFrame({
-        'iteration': range(max_iters),
-        'tol': tol_list,
-        'gradient': grad_list,
-        'js_divergence': js_dist_list
-    })
+    data_df = pd.DataFrame(
+        {
+            "iteration": range(max_iters),
+            "tol": tol_list,
+            "gradient": grad_list,
+            "js_divergence": js_dist_list,
+        }
+    )
     data_df.to_csv(f"opt_data_{noise_level:.6f}.csv", index=False)
 
     return data_df, initial_tol.item(), min(js_dist_list)
+
 
 # TODO Parse and plot result
 
@@ -284,7 +315,7 @@ def return_default(ideal_distrib):
 ##         cvxpy_problem.param_dict["tol"].value -= step * grad
 ##         if cvxpy_problem.param_dict["tol"].value <= 0:
 ##             cvxpy_problem.param_dict["tol"].value = 0.1
-## 
+##
 ##     plt.plot(range(20), tol_list, label="tolerance")
 ##     plt.plot(range(20), grad_list, label="gradient")
 ##     plt.legend()
@@ -312,7 +343,7 @@ def bayesian_opt(
     gp_result = gp_minimize(
         func=objective,
         dimensions=space,
-        n_calls=20,
+        n_calls=200,
         random_state=42,
         verbose=True,
         # x0=alpha_init + beta_init,
@@ -371,14 +402,14 @@ if __name__ == "__main__":
 
     ## TODO Modify below
 
-
     # I have two different "probability distributions"
     # One includes the (small) error probabilities in the conclusive probabilities
     # One excludes these probabilities and normalize the rest.
     # I think we have to have more than one partial functions
     # One for noise_level, one for params?
 
-    noise_levels = [0.1 ** (6 - 0.25 * i) for i in range(10)]
+    # noise_levels = [0.1 ** (6 - 0.25 * i) for i in range(10)]
+    noise_levels = [0.1 ** (6 - 0.5 * i) for i in range(10)]
     disturbance_states = [
         DensityMatrix(
             ProblemSpec.depolarizing_noise_channel(num_qubits=num_qubits)
@@ -445,17 +476,22 @@ if __name__ == "__main__":
 
         # Replace gradient descent with AdamW
         data_df, best_tol, best_js_dist = grad_descent_param(
-            alpha_init, beta_init, cvxpy_problem, problem_symm_states_1, ideal_result["distrib"]
+            alpha_init,
+            beta_init,
+            cvxpy_problem,
+            problem_symm_states_1,
+            ideal_result["distrib"],
+            max_iters=200,
         )
         print(f"Best tol: {best_tol}, Best JS divergence: {best_js_dist}")
 
         # Optionally keep Bayesian optimization
-        bayesian_opt(
-            get_js_distance,
-            num_states,
-            problem_symm_states_1,
-            ideal_result,
-            alpha_init,
-            beta_init,
-            cvxpy_problem,
-        )
+        ## bayesian_opt(
+        ##     get_js_distance,
+        ##     num_states,
+        ##     problem_symm_states_1,
+        ##     ideal_result,
+        ##     alpha_init,
+        ##     beta_init,
+        ##     cvxpy_problem,
+        ## )
