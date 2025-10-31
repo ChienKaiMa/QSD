@@ -6,7 +6,7 @@ sys.path.append("../")
 sys.path.append("../flow")
 from flow.interface import *
 from flow.problem_spec import *
-from flow.plots import *
+# from flow.plots import *
 from flow.verify_povm import *
 import numpy as np
 import cvxpy as cp
