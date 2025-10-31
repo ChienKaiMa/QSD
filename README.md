@@ -85,9 +85,20 @@ source install.sh
 Optional dependencies for performance enhancement are listed in `optional_dep.md`, which may accelerate large-scale problem solving.
 
 
-## Execution (TODO: Add more explanations)
+## Execution
 
 ### ProblemSpec: Problem instance construction
+Use the class `ProblemSpec` to start a quantum state discrimination (QSD) instance.
+The `ProblemSpec` object records the quantum states generally in numpy arrays, either
+as a state vector or density matrix and other basic information such as the number of qubits
+used to describe the states `num_qubits` and the number of states to be discriminated `num_states`.
+Users can provide a tag `case_id` to better track the objects later.
+
+User can specify any quantum states they like, as long as the states are expressed
+in iterable arrays. `ProblemSpec` also provides a `set_states` function so that
+users can specify or change the states' data later to reuse the objects.
+
+Below is an example:
 ```python
 from utils.handy_states import simple_2 
 from flow.solve_mix import *
@@ -111,6 +122,21 @@ qsd_problem.set_states(
 ```
 
 ### POVM synthesis with an optimization strategy
+We can then construct various optimization problems using functions in `flow/solve_mix.py`.
+
+| function name      | state type     | QSD          | extra arguments        |
+| ------------------ | -------------- | ------------ | ---------------------- |
+| apply_Eldar        | state vector   | Optimal UQSD | beta                   |
+| med_problem        | density matrix | MED          | (None)                 |
+| med_plus_problem   | density matrix | MED+         | (None)                 |
+| apply_frio         | density matrix | FRIO         | p_inc_lb               |
+| apply_crossQSD     | density matrix | CrossQSD     | alpha, beta            |
+| min_l1_problem     | density matrix | FitQSD-minL1 | ideal_distrib          |
+| min_ss_problem     | density matrix | FitQSD-minSS | ideal_distrib          |
+| meco_problem       | density matrix | FitQSD-MECO  | ideal_distrib          |
+| hybrid_obj_problem | density matrix | hybrid obj.  | ideal_distrib, param_a |
+
+The below code example continues the previous code block. The code solves a POVM according to the CrossQSD strategy, and extract the solution POVM with `get_povm_vectors`. We can then construct a `POVMCircuit` instance before the quantum circuit actually gets synthesized. `fix` makes sure that the input array is a POVM
 ```python
 from flow.build_circuits import *
 
@@ -126,6 +152,8 @@ povm_ckt = POVMCircuit(povm_vectors=np.stack(povm_vectors))
 povm_ckt.fix()
 ```
 ### (Optional) Quantum circuit synthesis and resynthesis
+`flow.build_circuits` has the function to build a quantum circuit from a POVM using isometry synthesis. First we can synthesize the circuit with `ccd`, `csd`, or `knill` methods. There are various functions to optimize a given quantum circuit in `flow.resynth`, for example `resynth_unitary`, `resynth_unitary_approx`, and `resynth_aqc`.
+The following code example follows the previous code block and obtains a resynthesized quantum circuit for `CrossQSD`.
 ```python
 from flow.resynth import resynth_aqc 
 qc = povm_ckt.build_circuit("ccd")
