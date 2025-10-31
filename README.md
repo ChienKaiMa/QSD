@@ -48,7 +48,7 @@ All generated results will be stored in the `results` directory.
 * `hybrid_sqrtd_results_3states.csv`: raw data for **Fig. 3 (right)**, visualized as `hybrid_3states_sqrtd.png`
 * `hybrid_psucc_results_2states.csv`: raw data for **Fig. 4 (left)**, visualized as `hybrid_2states_psucc.png`
 * `hybrid_sqrtd_results_2states.csv`: raw data for **Fig. 4 (right)**, visualized as `hybrid_2states_sqrtd.png`
-* `???.csv`: raw data for **Table 3**, summarized in `???.csv`
+* `qc_opt_summary_table.csv`: raw data for **Table 3**, summarized in `qc_opt_summary_table.csv`
 * `qc_sim.csv`: raw data for **Fig. 7**, visualized as `OptUQSD_ccd_q6_n3.png`
 
 ---

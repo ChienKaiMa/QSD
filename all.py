@@ -40,6 +40,17 @@ from qiskit_aer.noise import (
 import matplotlib.pyplot as plt
 from matplotlib.colors import TABLEAU_COLORS
 
+# For Table 3
+from utils.utils import *
+from qiskit.quantum_info import Operator
+from typing import Optional, Dict, Any
+import io
+import re
+from contextlib import redirect_stdout
+import argparse
+import pandas as pd
+import os
+
 
 def sweep_CrossQSD():
     # Define input states
@@ -1302,7 +1313,9 @@ def qc_sim():
     # Write the results to a CSV file
     with open("results/qc_sim.csv", "w", newline="") as file:
         writer = csv.writer(file)
-        writer.writerow(['lambda', 'result_0', 'result_1', 'result_2'])  # Header row
+        writer.writerow(
+            ["lambda", "result_0", "result_1", "result_2"]
+        )  # Header row
         for i in range(len(params)):
             writer.writerow([params[i], result_0[i], result_1[i], result_2[i]])
     print("[INFO] wrote results/qc_sim.csv")
@@ -1345,6 +1358,209 @@ def qc_sim():
     return
 
 
+# Functions required for qc_opt
+
+
+def get_unitary_circuit(qc) -> QuantumCircuit:
+    # https://docs.quantum.ibm.com/guides/synthesize-unitary-operators#synthesize-unitary-operations
+
+    U = Operator(qc)
+
+    nq = qc.num_qubits
+    unitary_circuit = QuantumCircuit(nq)
+    unitary_circuit.unitary(U, range(nq))
+    return unitary_circuit
+
+
+def resynth_unitary(qc) -> QuantumCircuit:
+    return get_unitary_circuit(qc).decompose(reps=3)
+
+
+def resynth_unitary_approx(qc) -> QuantumCircuit:
+    tmp_circuit = get_unitary_circuit(qc)
+
+    # The approximation degree defaults to 1.0
+    approx_circuit = transpile(
+        tmp_circuit,
+        unitary_synthesis_method="aqc",
+        unitary_synthesis_plugin_config={"seed": 42},
+        approximation_degree=1.0,
+        seed_transpiler=11,
+    )
+
+    return approx_circuit.decompose(reps=3)
+
+
+def resynth_unitary_approx_max(qc) -> QuantumCircuit:
+    tmp_circuit = get_unitary_circuit(qc)
+
+    # It won't work without specifying aqc
+    # It won't work without specifying basis_gates?
+    approx_circuit = transpile(
+        tmp_circuit,
+        unitary_synthesis_method="aqc",
+        unitary_synthesis_plugin_config={"seed": 42},
+        approximation_degree=0.97,
+        basis_gates=["u", "cx"],
+        seed_transpiler=11,
+    )
+
+    return approx_circuit.decompose(reps=3)
+
+
+def resynth_aqc(qc, uni_synth_config=None) -> QuantumCircuit:
+    tmp_circuit = get_unitary_circuit(qc)
+
+    aqc_circuit = transpile(
+        tmp_circuit,
+        unitary_synthesis_method="aqc",
+        unitary_synthesis_plugin_config=uni_synth_config,
+        approximation_degree=0,
+        seed_transpiler=11,
+    )
+
+    return aqc_circuit.decompose(reps=3)
+
+
+def try_synth(qc, case_id):
+    # Show different results (depth and fidelity)
+    resynth_circuit = resynth_unitary(qc)
+    approx_circuit = resynth_unitary_approx(qc)
+    approx_max_circuit = resynth_unitary_approx_max(qc)
+    aqc_circuit_v0 = resynth_aqc(
+        qc,
+        {
+            # "network_layout": "cart",
+            "connectivity_type": "star",
+            "depth": 10,
+            "seed": 3,
+        },
+    )
+    # TODO Approx again
+
+    # Collect data
+    data = []
+    data.append(
+        {
+            "case_id": case_id,
+            "circuit": "original",
+            "ops": qc.count_ops(),
+            "depth": qc.depth(),
+            "fidelity": None,
+        }
+    )
+    data.append(
+        {
+            "case_id": case_id,
+            "circuit": "resynth",
+            "ops": resynth_circuit.count_ops(),
+            "depth": resynth_circuit.depth(),
+            "fidelity": None,  # Will be computed below
+        }
+    )
+    data.append(
+        {
+            "case_id": case_id,
+            "circuit": "approx",
+            "ops": approx_circuit.count_ops(),
+            "depth": approx_circuit.depth(),
+            "fidelity": None,
+        }
+    )
+    data.append(
+        {
+            "case_id": case_id,
+            "circuit": "approx_max",
+            "ops": approx_max_circuit.count_ops(),
+            "depth": approx_max_circuit.depth(),
+            "fidelity": None,
+        }
+    )
+    data.append(
+        {
+            "case_id": case_id,
+            "circuit": "aqc_v0",
+            "ops": aqc_circuit_v0.count_ops(),
+            "depth": aqc_circuit_v0.depth(),
+            "fidelity": None,
+        }
+    )
+
+    from qiskit.quantum_info import process_fidelity, Operator
+
+    # Two operators which differ only by phase
+    op_a = Operator(qc)
+    op_b = Operator(resynth_circuit)
+    op_c = Operator(approx_circuit)
+    op_c_1 = Operator(approx_max_circuit)
+    op_d = Operator(aqc_circuit_v0)
+
+    # Compute process fidelity
+    F_resynth = process_fidelity(op_a, op_b)
+    print("Process fidelity (resynth) =", F_resynth)
+    F_approx = process_fidelity(op_a, op_c)
+    print("Process fidelity (approx) =", F_approx)
+    F_approx_max = process_fidelity(op_a, op_c_1)
+    print("Process fidelity (approx_max) =", F_approx_max)
+    F_aqc = process_fidelity(op_a, op_d)
+    print("Process fidelity (aqc) =", F_aqc)
+
+    # Update fidelities in data
+    for row in data:
+        if row["circuit"] == "resynth":
+            row["fidelity"] = F_resynth
+        elif row["circuit"] == "approx":
+            row["fidelity"] = F_approx
+        elif row["circuit"] == "approx_max":
+            row["fidelity"] = F_approx_max
+        elif row["circuit"] == "aqc_v0":
+            row["fidelity"] = F_aqc
+
+    # Save to CSV
+    filename = "results/qc_opt_summary_table.csv"
+    df = pd.DataFrame(data)
+    if os.path.exists(filename):
+        df.to_csv(filename, mode="a", header=False, index=False)
+    else:
+        df.to_csv(filename, mode="w", header=True, index=False)
+    return
+
+
+def qc_opt():
+    # -----------------------------------------------------------------
+    # Parse CLI argument --qubits
+    # --qubits N means: run N ∈ {2,3,4,5}
+    # and we will run all qubit sizes from 2 up to N inclusive.
+    # Example:
+    #   --qubits 4  => run [2,3,4]
+    #   --qubits 5  => run [2,3,4,5]
+    # -----------------------------------------------------------------
+    parser = argparse.ArgumentParser(
+        description="Run circuit synthesis experiments and emit summary_table.csv"
+    )
+    parser.add_argument(
+        "--qubits",
+        type=int,
+        required=True,
+        choices=[2, 3, 4, 5],
+        help="Maximum qubit count to evaluate (inclusive). "
+        "Will run all sizes from 2..N. Allowed values: 2,3,4,5.",
+    )
+    args = parser.parse_args()
+
+    # Build the list [2, 3, ..., args.qubits]
+    qubit_list = list(range(2, args.qubits + 1))
+
+    rows = []
+    for i in qubit_list:
+        try_synth(
+            QuantumCircuit.from_qasm_file(
+                f"circuits/symm/coh_symm_q{i}_n3_optuqsd_reducedpovm_ccd_no_backend.qasm"
+            ),
+            f"coh_q{i}_n3",
+        )
+
+
 if __name__ == "__main__":
     # Fig.1
     sweep_CrossQSD()
@@ -1356,3 +1572,5 @@ if __name__ == "__main__":
     hybrid_case_2()
     # Fig.7
     qc_sim()
+    # Table 3
+    qc_opt()

@@ -1,0 +1,11 @@
+case_id,circuit,ops,depth,fidelity
+coh_q2_n3,original,"OrderedDict({'u': 64, 'cx': 41, 'rz': 7})",84,
+coh_q2_n3,resynth,"OrderedDict({'u': 44, 'cx': 20})",45,0.9999999999999987
+coh_q2_n3,approx,"OrderedDict({'u': 31, 'cx': 14})",29,0.999999966766236
+coh_q2_n3,approx_max,"OrderedDict({'u': 29, 'cx': 14})",29,0.8539735636706433
+coh_q2_n3,aqc_v0,OrderedDict(),0,0.2626413046826267
+coh_q3_n3,original,"OrderedDict({'u': 285, 'cx': 218, 'rz': 15})",430,
+coh_q3_n3,resynth,"OrderedDict({'u': 208, 'cx': 100})",225,0.9999999999999987
+coh_q3_n3,approx,"OrderedDict({'u': 126, 'cx': 61})",83,0.9999944952471399
+coh_q3_n3,approx_max,"OrderedDict({'u': 121, 'cx': 61})",83,0.6401805772015705
+coh_q3_n3,aqc_v0,OrderedDict(),0,0.31539526148694647
