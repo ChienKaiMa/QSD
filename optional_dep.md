@@ -1,5 +1,24 @@
 # Optional Dependencies
 ## qclib fix
+Due to floating-point precision issues in qclib's matrix checks (specifically, strict `np.allclose` comparisons without explicit tolerance), you may encounter the following error during circuit compilation. This affects the orthonormal columns validation in isometry decomposition.
+
+**Example Error Traceback:**
+```plaintext
+Traceback (most recent call last):
+  File "/home/tacas/QSD/quick_test_tacas.py", line 31, in <module>
+    povm_ckts.build_circuit()
+  File "/home/tacas/QSD/flow/build_circuits.py", line 122, in build_circuit
+    qc_iso = qclib.isometry.decompose(unitary_gate, scheme=scheme)
+  File "/home/tacas/QSD/venv/lib/python3.12/site-packages/qclib/isometry.py", line 58, in decompose
+    check_isometry(iso, log_lines, log_cols)
+  File "/home/tacas/QSD/venv/lib/python3.12/site-packages/qclib/isometry.py", line 85, in check_isometry
+    raise ValueError("The input matrix has non orthonormal columns.")
+ValueError: The input matrix has non orthonormal columns.
+```
+
+The installation script (`install.sh`) automatically applies a single-line sed command to relax the tolerance in the relevant `np.allclose` call to `atol=1e-3`. After running the script, re-compile your circuits. If issues persist, try a larger tolerance manually or update qclib.
+
+## qclib fix
 If you see the following error during circuit compilation, please manually
 modify the qclib code for the circuit compilation. (TBA)
 
