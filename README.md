@@ -42,10 +42,12 @@ python3 all.py
 The entire process is expected to take about **??? hours**.
 All generated results will be stored in the `results` directory.
 
-* `results/crossqsd_results.csv`: raw data for **Fig. 1**, visualized as `results/crossqsd_ratio.png`
-* `results/fitqsd_results.csv`: raw data for **Fig. 2**, visualized as `results/fitqsd.png`
-* `???.csv`: raw data for **Fig. 3**, visualized as `???.png`
-* `???.csv`: raw data for **Fig. 4**, visualized as `???.png`
+* `crossqsd_results.csv`: raw data for **Fig. 1**, visualized as `crossqsd_ratio.png`
+* `fitqsd_results.csv`: raw data for **Fig. 2**, visualized as `fitqsd.png`
+* `hybrid_psucc_results_3states.csv`: raw data for **Fig. 3 (left)**, visualized as `hybrid_3states_psucc.png`
+* `hybrid_sqrtd_results_3states.csv`: raw data for **Fig. 3 (right)**, visualized as `hybrid_3states_sqrtd.png`
+* `hybrid_psucc_results_2states.csv`: raw data for **Fig. 4 (left)**, visualized as `hybrid_2states_psucc.png`
+* `hybrid_sqrtd_results_2states.csv`: raw data for **Fig. 4 (right)**, visualized as `hybrid_2states_sqrtd.png`
 * `???.csv`: raw data for **Table 3**, summarized in `???.csv`
 * `???.csv`: raw data for **Fig. 7**, visualized as `???.png`
 
